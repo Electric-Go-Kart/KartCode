@@ -4,59 +4,56 @@
  *   The requirements are two UART Tx and Rx ports.
  * 
  */
-#include <SoftwareSerial.h>
+
 #include <TFMini.h>
-//UART Protocol
-//Not all pins on the Mega and Mega 2560 support change interrupts,
-//so only the following can be used for RX:
-//10, 11, 12, 13, 50, 51, 52, 53, 62, 63, 64, 65, 66, 67, 68, 69
-
-//Uno
-SoftwareSerial portOne(8,9); //Rx,Tx
-SoftwareSerial portOne(6,7); //Rx,Tx
-
-/*Mega
-SoftwareSerial portOne(53,54); //Rx,Tx
-SoftwareSerial portOne(62,63); //Rx,Tx 
-*/
+//NOTE: This library is not the one available through the IDE
 
 TFMini Sensor1;
 TFMini Sensor2;
+//Declaraing the Sensors (Required for the library)
 
 void setup() {
-  // Step 1: Initialize hardware serial port (serial debug port)
-  Serial.begin(9600);
-  // wait for serial port to connect. Needed for native USB port only
+  Serial.begin(115200);
+  //Serial for Monitor
+  
   while (!Serial);
-     
   Serial.println ("Initializing...");
 
-  // Step 2: Initialize the data rate for the SoftwareSerial port
-  portOne.begin(9600);
-  portTwo.begin(9600);
-
-  // Step 3: Initialize the TF Mini sensor
-  Sensor1.begin(&portOne);    
-  Sensor2.begin(&portTwo); 
+  Serial1.begin(115200);
+  Serial2.begin(115200);
+  //Serials for the Sensors
+  
+  Sensor1.begin(&Serial1);    
+  Sensor2.begin(&Serial2); 
+  //Initialize Sensors with Serial
+  
+  delay(100);
+  //Let the Sensors Stabliize
+  
+  Sensor1.setSingleScanMode();
+  Sensor2.setSingleScanMode();
+  //Force each sensor to only read when triggered
 }
 
 
 void loop() {
-  // Take one TF Mini distance measurement
+  Sensor1.externalTrigger();  
   uint16_t dist1 = Sensor1.getDistance();
-  uint16_t strength1 = Sensor1.getRecentSignalStrength();
+  //Trigger and Read one distance
+  
+  Sensor2.externalTrigger();
   uint16_t dist2 = Sensor2.getDistance();
-  uint16_t strength2 = Sensor2.getRecentSignalStrength();
+  //Trigger and Read another distance
 
-  // Display the measurement
+  Serial.print("Dist1 ");
   Serial.print(dist1);
-  Serial.print(" cm      sigstr: ");
-  Serial.print(strength1);
-  Serial.print("           ");
+  Serial.println(" cm");
+  Serial.print("Dist2 ");
   Serial.print(dist2);
-  Serial.print(" cm      sigstr: ");
-  Serial.println(strength2);
+  Serial.println(" cm");
+  //Display the measurement
 
-  // Wait some short time before taking the next measurement
-  delay(250);  
+  delay(25);  
+  //Wait some short time
+  //Longer waits cause bufferring in the UART, will continue to work on this
 }
