@@ -55,7 +55,7 @@ void loop() {
   static int channel_in = 0; // 0=throttle, 1=steer, 2=drive_state, 3=headlights - counter for getting pulse inputs
   
 // this will be moved to interupt section that runs every 20ms (how long the period is of PWM signals to DC motor
-  if(channel_in == 0){ // update throttle
+  /*if(channel_in == 0){ // update throttle
     throttle_pulse = pulseIn(throttle, HIGH, 30000);
     updateThrottleOut(throttle_pulse, drive_state);
     channel_in++;
@@ -74,19 +74,19 @@ void loop() {
     headlights_pulse = pulseIn(headlights, HIGH, 30000);
     updateHeadlights(headlights_pulse);
     channel_in = 0;
-/*
-    Serial.print("Throttle:   ");
-    Serial.println(throttle_pulse);
-    Serial.print("Steering:   ");
-    Serial.println(steer_pulse);
-    Serial.print("Shifter:    ");
-    Serial.println(drive_state_pulse);
-    Serial.print("Headlights: ");
-    Serial.println(headlights_pulse);
-    Serial.println('\n');
-    delay(2000);
-  */
-  }
+  }*/
+
+  throttle_pulse = pulseIn(throttle, HIGH, 30000);
+  updateThrottleOut(throttle_pulse, drive_state);
+
+  steer_pulse = pulseIn(steer, HIGH, 30000);
+  updateSteering(steer_pulse);
+
+  drive_state_pulse = pulseIn(steer, HIGH, 30000);
+  updateDriveState(drive_state_pulse);
+
+  headlights_pulse = pulseIn(headlights, HIGH, 30000);
+  updateHeadlights(headlights_pulse);
   
 
 }

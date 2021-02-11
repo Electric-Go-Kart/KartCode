@@ -13,6 +13,11 @@
 #include<LCD.h>
 #include<LiquidCrystal_I2C.h>
 
+
+// Const values to be used throughout program
+const float maxMotorCurrent = 10;
+const float maxMotorDuty = .50;
+
 // Analog pin for acceleration pedal
 const int accel_in = A0;
 
@@ -35,6 +40,8 @@ LiquidCrystal_I2C screen4(0x24, 2, 1, 0, 4, 5, 6, 7);
 // to make custom characters for screen //
 uint8_t custom[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}; // hex values represent that pixels to be lit up
 
+
+
 void setup() {
   Serial.begin(9600);     // baud rate for Serial Monitor for debugging
   while(!Serial){;}       // wait while Serial Monitor not open
@@ -43,9 +50,8 @@ void setup() {
   
   Serial2.begin(115200);  // initialize serial port 2 for VESC_right;
   VESC_right.setSerialPort(&Serial2);
-  VESC_right.setDebugPort(&Serial);
 
-  /*// initialize all of our screens
+  // initialize all of our screens
   screen1.begin(16,2);
   screen2.begin(16,2);
   screen3.begin(16,2);
@@ -68,33 +74,83 @@ void setup() {
   screen3.clear();
   screen3.print("initializing");
   screen4.clear();
-  screen4.print("initializing");*/
+  screen4.print("initializing");
 }
 
 void loop() {
-   Serial.print(VESC_right.getVescValues());
-   if(VESC_right.getVescValues()){
-    Serial.print("RPM: ");
-    Serial.println(VESC_right.data.rpm);
-    Serial.print("InV: ");
-    Serial.println(VESC_right.data.inpVoltage);
-    Serial.print("Amps: ");
-    Serial.println(VESC_right.data.ampHours);
-    Serial.print("Tach:");
-    Serial.println(VESC_right.data.tachometerAbs);
-   } else {
-    Serial.println("Failed to get Data.");
-   }
-
-  delay(500);
+   updateDrive();
+   //updateScreens();
+   //Serial.println();
+   delay(20);
 }
 
-void updateDrive(){
-  // read in the ADC0 to determine position of pedal, and update Duty Cycle To VESC's
-  /*int pedalPos = analogRead(A0);
-  pedalPos = map(pedalPos, 0, 1024, 0, 5);*/
 
-  
-  
-  
+// Function to read in the analogInput from the Acceleration pedal
+// Maps that 0-5V value to a duty cycle (0-maxMotorDuty)
+// Prints off the time the function took as well for testing purposes
+
+void updateDrive(){
+  long unsigned int startTime = micros();
+  int pedal = analogRead(A0);
+  float current = 0;
+  if(pedal > 200 && pedal < 1024)
+    current = mapping(pedal, 0, 1024, 0, maxMotorDuty);
+  else
+    current = 0;
+
+/* To update motors:    
+ *    setCurrent(float)
+ *    setDuty(float)
+ *    setRpm(float)
+ *    setBreakCurren(float)*/
+  Serial.print("Duty: ");
+  Serial.println(current);
+  VESC_right.setDuty(current);  // by setting current, both motors are not at same RPM
+  VESC_left.setDuty(current);   // by setting duty, ensures they stay at same RPM
+
+  long unsigned int totalTime = micros() - startTime;
+  Serial.print("Time to run updateDrive: ");
+  Serial.print(totalTime);
+  Serial.println("us");
+  return;
+}
+
+// works the same as the built in map function, but returns a
+// float for more accurate mapping at smaller values
+float mapping(float input, float a, float b, float c, float d){
+  return (input /(b-a)*(d-c)+c);
+}
+
+
+// Function to update and display values to the screens
+// Screen 1 - Both Motors current Speed (or just avg speed of both motors)
+// Screen 2 - Battery Life left
+// Screen 3 - Avg current to both motors
+// Screen 4 - Temps of motors / batteries?
+
+// Patrick says MPH, Voltage and Voltage/12(each cell estimated)
+void updateScreens(){
+  long unsigned int startTime = micros();
+  long R_currentRpm = VESC_right.data.rpm;
+  long L_currentRpm = VESC_left.data.rpm;
+  char Rbuf[16];
+  char Lbuf[16];
+  ltoa(R_currentRpm, Rbuf, 10);
+  ltoa(L_currentRpm, Lbuf, 10);
+
+  // set pos to 0,0 and print right data
+  // set pos to 1,0 and print left data
+  screen1.clear();
+  screen1.setCursor(0,0);
+  screen1.write("Right Rpm:");
+  screen1.write(Rbuf);
+  screen1.setCursor(0,1);
+  screen1.write("Left  Rpm:");
+  screen1.write(Lbuf);
+
+  long unsigned int TotalTime = micros() - startTime;
+  Serial.print("Time to run updateScreens: ");
+  Serial.print(TotalTime);
+  Serial.println("us");
+  return;
 }
