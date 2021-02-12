@@ -93,12 +93,12 @@ void loop() {
   clear_path=distanceCheck();                                  // Use LiDar to see if there is an obstacle
   
   throttle_pulse = pulseIn(throttle, HIGH, 30000);
-  updateThrottleOut(throttle_pulse, drive_state);
+  updateThrottleOut(throttle_pulse, drive_state, clear_path);
 
   steer_pulse = pulseIn(steer, HIGH, 30000);
   updateSteering(steer_pulse);
 
-  drive_state_pulse = pulseIn(steer, HIGH, 30000);
+  drive_state_pulse = pulseIn(DriveOrReverse, HIGH, 30000);
   updateDriveState(drive_state_pulse);
 
   headlights_pulse = pulseIn(headlights, HIGH, 30000);
@@ -106,7 +106,7 @@ void loop() {
   
 }
 
-void updateThrottleOut(int &pulse, int &drive_state){
+void updateThrottleOut(int &pulse, int &drive_state, bool &clear_path){
   static int setRpm1 = 0, setRpm2 = 0;            // Initialize RPM's
 
   if(drive_state == 0){                           // Neutral - Ouput Low Low to start breaking and bring car to stop
@@ -116,7 +116,7 @@ void updateThrottleOut(int &pulse, int &drive_state){
     analogWrite(PWMout2, setRpm2);                // Set both PWM to 0
     
   } else if(drive_state == 1 && clear_path){      // Drive - Output High, Low to drive forward
-      if(pulse > 1100 && pulse < 2050)
+      if(pulse > 1100 && pulse < 2050)                // if not clear path, will go into else and stop car
         setRpm1 = map(pulse, 1100, 2050, 0, 255); // Map input pulse to PWM output duty cycle between 0 and 255
       else 
         setRpm1 = 0;                              // If input pulse is too slow, stay still
