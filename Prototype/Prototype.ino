@@ -65,7 +65,7 @@ void loop() {
   static int drive_state_pulse = 1000;                         // These 4 are the pulse length in microseconds that they are active high
   static int headlights_pulse = 1000;                          // These 4 are the pulse length in microseconds that they are active high
   static int drive_state = 0;                                  // 0=neutral, 1=drive, 2=reverse
-  static bool clear_path = true;                               // Whether or not the path is clear
+  static bool safe_path = true;                               // Whether or not the path is clear
   //static int channel_in = 0; // 0=throttle, 1=steer, 2=drive_state, 3=headlights - counter for getting pulse inputs
   
 // this will be moved to interupt section that runs every 20ms (how long the period is of PWM signals to DC motor
@@ -90,10 +90,10 @@ void loop() {
     channel_in = 0;
   }*/
 
-  clear_path=distanceCheck();                                  // Use LiDar to see if there is an obstacle
+  safe_path=distanceCheck();                                  // Use LiDar to see if there is an obstacle
   
   throttle_pulse = pulseIn(throttle, HIGH, 30000);
-  updateThrottleOut(throttle_pulse, drive_state, clear_path);
+  updateThrottleOut(throttle_pulse, drive_state, safe_path);
 
   steer_pulse = pulseIn(steer, HIGH, 30000);
   updateSteering(steer_pulse);
@@ -106,7 +106,7 @@ void loop() {
   
 }
 
-void updateThrottleOut(int &pulse, int &drive_state, bool &clear_path){
+void updateThrottleOut(int &pulse, int &drive_state, bool &safe_path){
   static int setRpm1 = 0, setRpm2 = 0;            // Initialize RPM's
 
   if(drive_state == 0){                           // Neutral - Ouput Low Low to start breaking and bring car to stop
@@ -115,7 +115,7 @@ void updateThrottleOut(int &pulse, int &drive_state, bool &clear_path){
     analogWrite(PWMout1, setRpm1);                // Set both PWM to 0
     analogWrite(PWMout2, setRpm2);                // Set both PWM to 0
     
-  } else if(drive_state == 1 && clear_path){      // Drive - Output High, Low to drive forward
+  } else if(drive_state == 1 && safe_path){      // Drive - Output High, Low to drive forward
       if(pulse > 1100 && pulse < 2050)                // if not clear path, will go into else and stop car
         setRpm1 = map(pulse, 1100, 2050, 0, 255); // Map input pulse to PWM output duty cycle between 0 and 255
       else 
@@ -183,7 +183,7 @@ boolean distanceCheck(){
   Sensor2.externalTrigger();                      // Repeat
   distance_two = Sensor2.getDistance();
   
-  if (distance_one <= 100 || distance_two <= 100) // Ensure that the distance is correct
+  if (distance_one < 100 || distance_two < 100) // Ensure that the distance is correct
     return false;                                 // Less than 100 cm is unsafe
   else
     return true;                                  // Greater than 100 cm is safe
