@@ -66,44 +66,30 @@ void loop() {
   static int headlights_pulse = 1000;                          // These 4 are the pulse length in microseconds that they are active high
   static int drive_state = 0;                                  // 0=neutral, 1=drive, 2=reverse
   static bool safe_path = true;                               // Whether or not the path is clear
-  //static int channel_in = 0; // 0=throttle, 1=steer, 2=drive_state, 3=headlights - counter for getting pulse inputs
+  static int counter = 0;
   
-// this will be moved to interupt section that runs every 20ms (how long the period is of PWM signals to DC motor
-  /*if(channel_in == 0){ // update throttle
-    throttle_pulse = pulseIn(throttle, HIGH, 30000);
-    updateThrottleOut(throttle_pulse, drive_state);
-    channel_in++;
- 
-  } else if(channel_in == 1){ // update steering direction
-    steer_pulse = pulseIn(steer, HIGH, 30000);
-    updateSteering(steer_pulse);
-    channel_in++;
-    
-  } else if(channel_in == 2){ // update drive_state
-    drive_state_pulse = pulseIn(DriveOrReverse, HIGH, 30000);
-    drive_state = updateDriveState(drive_state_pulse);
-    channel_in++;
-    
-  } else {  // update headlights on/off
-    headlights_pulse = pulseIn(headlights, HIGH, 30000);
-    updateHeadlights(headlights_pulse);
-    channel_in = 0;
-  }*/
-
-  safe_path=distanceCheck();                                  // Use LiDar to see if there is an obstacle
-  
-  throttle_pulse = pulseIn(throttle, HIGH, 30000);
-  updateThrottleOut(throttle_pulse, drive_state, safe_path);
-
-  steer_pulse = pulseIn(steer, HIGH, 30000);
-  updateSteering(steer_pulse);
-
-  drive_state_pulse = pulseIn(DriveOrReverse, HIGH, 30000);
-  updateDriveState(drive_state_pulse);
-
-  headlights_pulse = pulseIn(headlights, HIGH, 30000);
-  updateHeadlights(headlights_pulse);
-  
+  switch(counter){
+    case 0:
+      throttle_pulse = pulseIn(throttle, HIGH, 30000);
+      updateThrottleOut(throttle_pulse, drive_state);
+      break;
+    case 1:
+      steer_pulse = pulseIn(steer, HIGH, 30000);
+      updateSteering(steer_pulse);
+      break;
+    case 2:
+      drive_state_pulse = pulseIn(DriveOrReverse, HIGH, 30000);
+      drive_state = updateDriveState(drive_state_pulse);
+      break;
+    case 3:
+      headlights_pulse = pulseIn(headlights, HIGH, 30000);
+      updateHeadlights(headlights_pulse);
+      break;    
+    default:
+      counter = -1;
+      break;      
+  }
+  counter++;
 }
 
 void updateThrottleOut(int &pulse, int &drive_state, bool &safe_path){
