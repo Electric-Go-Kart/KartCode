@@ -65,35 +65,12 @@ void loop() {
   static int drive_state_pulse = 1000;                         // These 4 are the pulse length in microseconds that they are active high
   static int headlights_pulse = 1000;                          // These 4 are the pulse length in microseconds that they are active high
   static int drive_state = 0;                                  // 0=neutral, 1=drive, 2=reverse
-  static bool safe_path = true;                               // Whether or not the path is clear
   //static int channel_in = 0; // 0=throttle, 1=steer, 2=drive_state, 3=headlights - counter for getting pulse inputs
   
 // this will be moved to interupt section that runs every 20ms (how long the period is of PWM signals to DC motor
-  /*if(channel_in == 0){ // update throttle
-    throttle_pulse = pulseIn(throttle, HIGH, 30000);
-    updateThrottleOut(throttle_pulse, drive_state);
-    channel_in++;
- 
-  } else if(channel_in == 1){ // update steering direction
-    steer_pulse = pulseIn(steer, HIGH, 30000);
-    updateSteering(steer_pulse);
-    channel_in++;
-    
-  } else if(channel_in == 2){ // update drive_state
-    drive_state_pulse = pulseIn(DriveOrReverse, HIGH, 30000);
-    drive_state = updateDriveState(drive_state_pulse);
-    channel_in++;
-    
-  } else {  // update headlights on/off
-    headlights_pulse = pulseIn(headlights, HIGH, 30000);
-    updateHeadlights(headlights_pulse);
-    channel_in = 0;
-  }*/
-
-  safe_path=distanceCheck();                                  // Use LiDar to see if there is an obstacle
   
   throttle_pulse = pulseIn(throttle, HIGH, 30000);
-  updateThrottleOut(throttle_pulse, drive_state, safe_path);
+  updateThrottleOut(throttle_pulse, drive_state);
 
   steer_pulse = pulseIn(steer, HIGH, 30000);
   updateSteering(steer_pulse);
@@ -106,7 +83,7 @@ void loop() {
   
 }
 
-void updateThrottleOut(int &pulse, int &drive_state, bool &safe_path){
+void updateThrottleOut(int &pulse, int &drive_state){
   static int setRpm1 = 0, setRpm2 = 0;            // Initialize RPM's
 
   if(drive_state == 0){                           // Neutral - Ouput Low Low to start breaking and bring car to stop
@@ -115,11 +92,21 @@ void updateThrottleOut(int &pulse, int &drive_state, bool &safe_path){
     analogWrite(PWMout1, setRpm1);                // Set both PWM to 0
     analogWrite(PWMout2, setRpm2);                // Set both PWM to 0
     
-  } else if(drive_state == 1 && safe_path){      // Drive - Output High, Low to drive forward
-      if(pulse > 1100 && pulse < 2050)                // if not clear path, will go into else and stop car
-        setRpm1 = map(pulse, 1100, 2050, 0, 255); // Map input pulse to PWM output duty cycle between 0 and 255
-      else 
+  } else if(drive_state == 1){                    // Drive - Output High, Low to drive forward
+      int maxRPM = 0;
+      
+      if(pulse > 1100 && pulse < 2050) {      // Good input pulse 
+        int lidarDist = distanceCheck();        // distance to closest object (in cm)
+        setRpm1 = map(pulse, 1100, 2050, 0, 255);
+        
+        if(lidarDist < 400){                    // if distance to object is too close -> set maxRPM
+          maxRPM = map(lidarDist, 0, 400, 0, 255);
+          if(setRpm1 > maxRPM)
+            setRpm1 = maxRPM;
+        }
+      } else {                                // Bad input pulse
         setRpm1 = 0;                              // If input pulse is too slow, stay still
+      }
         
       setRpm2 = 0;                                // Second needs to be Low to drive Forwards
       analogWrite(PWMout2, setRpm2);              // Set second PWM Low
@@ -175,18 +162,19 @@ void updateSteering(int &pulse){
   delay(50);
 }
 
-boolean distanceCheck(){
+int distanceCheck(){
   static uint16_t distance_one = 0; 
   static uint16_t distance_two = 0;               // Initialize the Variables
   Sensor1.externalTrigger();                      // Trigger the sensor
   distance_one = Sensor1.getDistance();           // Read Data
   Sensor2.externalTrigger();                      // Repeat
   distance_two = Sensor2.getDistance();
-  
-  if (distance_one < 100 || distance_two < 100) // Ensure that the distance is correct
-    return false;                                 // Less than 100 cm is unsafe
-  else
-    return true;                                  // Greater than 100 cm is safe
+
+  if(distance_one > distance_two){                // Return the distance to the closest object on either sensor
+    return distance_one;    
+  } else {
+    return distance_two;
+  }
                                                   // Measurements which are out of range will give the value 65535, which is the maximum value of a 16 bit unsigned integer.
                                                   // The range of this sensor should be 1500 cm, but has not been verified.
 }
