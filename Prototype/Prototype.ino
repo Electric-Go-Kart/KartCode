@@ -65,6 +65,7 @@ void loop() {
   static int drive_state_pulse = 1000;                         // These 4 are the pulse length in microseconds that they are active high
   static int headlights_pulse = 1000;                          // These 4 are the pulse length in microseconds that they are active high
   static int drive_state = 0;                                  // 0=neutral, 1=drive, 2=reverse
+<<<<<<< HEAD
   //static int channel_in = 0; // 0=throttle, 1=steer, 2=drive_state, 3=headlights - counter for getting pulse inputs
   
 // this will be moved to interupt section that runs every 20ms (how long the period is of PWM signals to DC motor
@@ -80,7 +81,33 @@ void loop() {
 
   headlights_pulse = pulseIn(headlights, HIGH, 30000);
   updateHeadlights(headlights_pulse);
+=======
+  static bool safe_path = true;                               // Whether or not the path is clear
+  static int counter = 0;
+>>>>>>> 1483037100e5a205e05f27716bc832194e15a738
   
+  switch(counter){
+    case 0:
+      throttle_pulse = pulseIn(throttle, HIGH, 30000);
+      updateThrottleOut(throttle_pulse, drive_state);
+      break;
+    case 1:
+      steer_pulse = pulseIn(steer, HIGH, 30000);
+      updateSteering(steer_pulse);
+      break;
+    case 2:
+      drive_state_pulse = pulseIn(DriveOrReverse, HIGH, 30000);
+      drive_state = updateDriveState(drive_state_pulse);
+      break;
+    case 3:
+      headlights_pulse = pulseIn(headlights, HIGH, 30000);
+      updateHeadlights(headlights_pulse);
+      break;    
+    default:
+      counter = -1;
+      break;      
+  }
+  counter++;
 }
 
 void updateThrottleOut(int &pulse, int &drive_state){
