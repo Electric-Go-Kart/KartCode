@@ -212,14 +212,14 @@ void updateSteering(int &pulse){
  *  return value is cm
  */
 int distanceCheck(){
-  static uint16_t distance_one = 0; 
-  static uint16_t distance_two = 0;               // Initialize the Variables
+  uint16_t distance_one = 0; 
+  uint16_t distance_two = 0;                      // Initialize the Variables
   Sensor1.externalTrigger();                      // Trigger the sensor
   distance_one = Sensor1.getDistance();           // Read Data
   Sensor2.externalTrigger();                      // Repeat
   distance_two = Sensor2.getDistance();
 
-  if(distance_one > distance_two){                // Return the distance to the closest object on either sensor
+  if(distance_one < distance_two){                // Return the distance to the closest object on either sensor
     return distance_one;    
   } else {
     return distance_two;
