@@ -22,16 +22,16 @@ Servo steeringServo;
 TFMini Sensor1;
 TFMini Sensor2;
 
-const int throttle = 2;           // channel 3 on reciever
-const int steer = 3;              // channel 4 on reciever
-const int headlights = 4;         // channel 5 on reciever
-const int DriveOrReverse = 5;     // channel 6 on reciever
+const int throttle = 2;           // channel 3 on reciever  // 2 for Mega
+const int steer = 3;              // channel 4 on reciever  // 3 for Mega
+const int headlights = 4;         // channel 5 on reciever  // 4 for Mega
+const int DriveOrReverse = 5;     // channel 6 on reciever  // 5 for Mega
 
 
-const int servoPIN = 9;           // Pin for servo output
-const int PWMout1 = 10;           // These two will be the outputs for the motors
-const int PWMout2 = 11;           // Left and right motor will run at same speed by only using 2 outputs
-const int lightsPIN = 22;         // Pin used to turn the headlights on and off
+const int servoPIN = 9;           // Pin for servo output   // 9 for Mega
+const int PWMout1 = 7;           // These two will be the outputs for the motors // 10 for Mega
+const int PWMout2 = 6;           // Left and right motor will run at same speed by only using 2 outputs  // 11 for Mega
+const int lightsPIN = 8;         // Pin used to turn the headlights on and off   // 22 for Mega
 
 void setup() {
   pinMode(throttle, INPUT);
@@ -49,11 +49,11 @@ void setup() {
   Serial1.begin(115200);
   Serial2.begin(115200);                                       // Serials for the Sensors
   
-  Sensor1.begin(&Serial1);    
-  Sensor2.begin(&Serial2);                                     // Initialize Sensors with Serial
+  Sensor1.begin(&Serial3);  // was Serial1 
+  Sensor2.begin(&Serial4);  // was Serial2                                   // Initialize Sensors with Serial
 
-  Sensor1.setSingleScanMode();
-  Sensor2.setSingleScanMode();                                 // Force each sensor to only read when triggered
+  //Sensor1.setSingleScanMode();
+  //Sensor2.setSingleScanMode();                                 // Force each sensor to only read when triggered
   
   delay(50);                                                   // Let signals stabilize
 }
@@ -114,7 +114,8 @@ void updateThrottleOut(int &pulse, int &drive_state){
       Serial.print("Pulse: ");
       Serial.println(pulse);
       if(pulse > 1100 && pulse < 2050) {      // Good input pulse 
-        int lidarDist = 500;//distanceCheck();        // distance to closest object (in cm)
+        int lidarDist = distanceCheck();        // distance to closest object (in cm)
+        Serial.println(lidarDist);
         setRpm1 = map(pulse, 1100, 2050, 0, 255);
         
         if(lidarDist < 400){                    // if distance to object is too close -> set maxRPM
@@ -212,12 +213,17 @@ void updateSteering(int &pulse){
  *  return value is cm
  */
 int distanceCheck(){
+  Serial.println("In distCheck");
   static uint16_t distance_one = 0; 
   static uint16_t distance_two = 0;               // Initialize the Variables
-  Sensor1.externalTrigger();                      // Trigger the sensor
+  //Sensor1.externalTrigger();                      // Trigger the sensor
+  Serial.println("1");
   distance_one = Sensor1.getDistance();           // Read Data
-  Sensor2.externalTrigger();                      // Repeat
+  Serial.println("2");
+  //Sensor2.externalTrigger();                      // Repeat
+  Serial.println("3");
   distance_two = Sensor2.getDistance();
+  Serial.println("4");
 
   if(distance_one > distance_two){                // Return the distance to the closest object on either sensor
     return distance_one;    

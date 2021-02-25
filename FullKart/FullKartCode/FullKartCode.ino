@@ -1,18 +1,20 @@
-/*    Code for CSU EKart Senior Design project
+ /*    Code for CSU EKart Senior Design project
  *    By: Deagan Malloy
  *    
- *    VESC_left   - Serial1 - RX1 TX1
- *    VESC_right  - Serial2 - RX2 TX2
- *    
+ *    PINS:
+ *      VESC_left   - Serial1 - RX1 TX1 - 19, 18
+ *      VESC_right  - Serial2 - RX2 TX2 - 17, 16
+ *      Screens     -   I2C   - SDA SCL - 20, 21
+ *      "Gas" Pedal -   ADC   - A0      - A0
+ *      
  *    
  */
 
 #include<VescUart.h>  // for the UART communication between VESC and MEGA
 
-#include<Wire.h>    // for the I2C communication between Screens and MEGA
+#include<Wire.h>      // for the I2C communication between Screens and MEGA
 #include<LCD.h>
 #include<LiquidCrystal_I2C.h>
-
 
 // Const values to be used throughout program
 const float maxMotorCurrent = 10;
@@ -51,30 +53,7 @@ void setup() {
   Serial2.begin(115200);  // initialize serial port 2 for VESC_right;
   VESC_right.setSerialPort(&Serial2);
 
-  // initialize all of our screens
-  screen1.begin(16,2);
-  screen2.begin(16,2);
-  screen3.begin(16,2);
-  screen4.begin(16,2);
-
-  screen1.setBacklightPin(3,POSITIVE);
-  screen2.setBacklightPin(3,POSITIVE);
-  screen3.setBacklightPin(3,POSITIVE);
-  screen4.setBacklightPin(3,POSITIVE);
-
-  screen1.setBacklight(HIGH);
-  screen2.setBacklight(HIGH);
-  screen3.setBacklight(HIGH);
-  screen4.setBacklight(HIGH);
-
-  screen1.clear();
-  screen1.print("initializing");
-  screen2.clear();
-  screen2.print("initializing");
-  screen3.clear();
-  screen3.print("initializing");
-  screen4.clear();
-  screen4.print("initializing");
+  initialize_screens();
 }
 
 void loop() {
@@ -88,7 +67,6 @@ void loop() {
 // Function to read in the analogInput from the Acceleration pedal
 // Maps that 0-5V value to a duty cycle (0-maxMotorDuty)
 // Prints off the time the function took as well for testing purposes
-
 void updateDrive(){
   long unsigned int startTime = micros();
   int pedal = analogRead(A0);
@@ -127,7 +105,6 @@ float mapping(float input, float a, float b, float c, float d){
 // Screen 2 - Battery Life left
 // Screen 3 - Avg current to both motors
 // Screen 4 - Temps of motors / batteries?
-
 // Patrick says MPH, Voltage and Voltage/12(each cell estimated)
 void updateScreens(){
   long unsigned int startTime = micros();
@@ -153,4 +130,34 @@ void updateScreens(){
   Serial.print(TotalTime);
   Serial.println("us");
   return;
+}
+
+
+
+void initialize_screens(){
+  // initialize all of our screens
+  screen1.begin(16,2);
+  screen2.begin(16,2);
+  screen3.begin(16,2);
+  screen4.begin(16,2);
+
+  screen1.setBacklightPin(3,POSITIVE);
+  screen2.setBacklightPin(3,POSITIVE);
+  screen3.setBacklightPin(3,POSITIVE);
+  screen4.setBacklightPin(3,POSITIVE);
+
+  screen1.setBacklight(HIGH);
+  screen2.setBacklight(HIGH);
+  screen3.setBacklight(HIGH);
+  screen4.setBacklight(HIGH);
+
+  screen1.clear();
+  screen1.print("initializing");
+  screen2.clear();
+  screen2.print("initializing");
+  screen3.clear();
+  screen3.print("initializing");
+  screen4.clear();
+  screen4.print("initializing");
+
 }
