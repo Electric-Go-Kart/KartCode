@@ -119,7 +119,7 @@ void updateThrottleOut(int &pulse, int &drive_state){
         setRpm1 = map(pulse, 1100, 2050, 0, 255);
         
         if(lidarDist < 400){                    // if distance to object is too close -> set maxRPM
-          maxRPM = map(lidarDist, 0, 400, 0, 255);
+          maxRPM = map(lidarDist, 30, 400, 0, 255);
           if(setRpm1 > maxRPM)
             setRpm1 = maxRPM;
         }
