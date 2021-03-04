@@ -6,8 +6,6 @@
  *      VESC_right  - Serial2 - RX2 TX2 - 17, 16
  *      Screens     -   I2C   - SDA SCL - 20, 21
  *      "Gas" Pedal -   ADC   - A0      - A0
- *      
- *    
  */
 
 #include<VescUart.h>  // for the UART communication between VESC and MEGA
@@ -17,14 +15,16 @@
 #include<LiquidCrystal_I2C.h>
 
 // Const values to be used throughout program
-const float maxMotorCurrent = 10;
-const float maxMotorDuty = .50;
+const float MAXMOTORCURRENT = 10;   // Should be set to 50 once the full goKart is built
+const float MAXMOTORDUTY = .50;     // Should probably stay here once the full kart is built
+const float MAXREVERSECURRENT = 5;
+const float MAXREVERSEDUTY = .20;
 
 // Analog pin for acceleration pedal
 const int accel_in = A0;
 
 // Digital switches for switches on dash
-const int switch1 = 22;
+const int switch1 = 22;   // For Drive / Reverse Functionality
 const int switch2 = 23;
 const int switch3 = 24;
 const int switch4 = 25;
@@ -42,6 +42,10 @@ LiquidCrystal_I2C screen4(0x24, 2, 1, 0, 4, 5, 6, 7);
 // to make custom characters for screen //
 uint8_t custom[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}; // hex values represent that pixels to be lit up
 
+void initialize_screens();
+void updateScreens();
+void updateDrive();
+float mapping(float input, float a, float b, float c, float d);
 
 
 void setup() {
@@ -49,9 +53,11 @@ void setup() {
   while(!Serial){;}       // wait while Serial Monitor not open
   Serial1.begin(115200);  // initialize serial port 1 for VESC_left
   VESC_left.setSerialPort(&Serial1);
+  VESC_left.setDebugPort(&Serial);
   
   Serial2.begin(115200);  // initialize serial port 2 for VESC_right;
   VESC_right.setSerialPort(&Serial2);
+  VESC_right.setDebugPort(&Serial);
 
   initialize_screens();
 }
@@ -60,7 +66,7 @@ void loop() {
    updateDrive();
    //updateScreens();
    //Serial.println();
-   delay(20);
+   delay(10);
 }
 
 
@@ -68,24 +74,43 @@ void loop() {
 // Maps that 0-5V value to a duty cycle (0-maxMotorDuty)
 // Prints off the time the function took as well for testing purposes
 void updateDrive(){
+  static int lastRead = 260;
   long unsigned int startTime = micros();
-  int pedal = analogRead(A0);
+  int pedal = analogRead(A0); // Because we are running on 3.3V not 5V now this reads inbetween 
+
+  bool driving = false;
+  
+  Serial.print("Pedal in: "); // around 250-800 instead of the 0-1024 on 0-5V
+  Serial.println(pedal);
+  Serial.print("Switch: ");
+  Serial.println(digitalRead(switch1));
+  
   float current = 0;
-  if(pedal > 200 && pedal < 1024)
-    current = mapping(pedal, 0, 1024, 0, maxMotorDuty);
-  else
+  float reverseCurrent = 0;
+
+  if(pedal > 260 && pedal < 850){ 
+    current        = mapping(pedal, 260, 850, 0, MAXMOTORCURRENT);
+    reverseCurrent = mapping(pedal, 260, 850, 0, MAXREVERSECURRENT);
+  } else {
     current = 0;
+  }
+    
+  if(digitalRead(switch1)){ // Forward Mode
+    VESC_right.setCurrent(current);
+    VESC_left.setCurrent(current);
+    
+  } else {                  // Reverse 
+    VESC_right.setCurrent(-reverseCurrent);
+    VESC_left.setCurrent(-reverseCurrent);
+  }
+
 
 /* To update motors:    
  *    setCurrent(float)
  *    setDuty(float)
  *    setRpm(float)
- *    setBreakCurren(float)*/
-  Serial.print("Duty: ");
-  Serial.println(current);
-  VESC_right.setDuty(current);  // by setting current, both motors are not at same RPM
-  VESC_left.setDuty(current);   // by setting duty, ensures they stay at same RPM
-
+ *    setBreakCurrent(float)*/
+  
   long unsigned int totalTime = micros() - startTime;
   Serial.print("Time to run updateDrive: ");
   Serial.print(totalTime);
@@ -107,6 +132,7 @@ float mapping(float input, float a, float b, float c, float d){
 // Screen 4 - Temps of motors / batteries?
 // Patrick says MPH, Voltage and Voltage/12(each cell estimated)
 void updateScreens(){
+  if(VESC_left.getVescValues()){
   long unsigned int startTime = micros();
   long R_currentRpm = VESC_right.data.rpm;
   long L_currentRpm = VESC_left.data.rpm;
@@ -114,7 +140,16 @@ void updateScreens(){
   char Lbuf[16];
   ltoa(R_currentRpm, Rbuf, 10);
   ltoa(L_currentRpm, Lbuf, 10);
-
+  Serial.print("Right RPM: ");
+  Serial.print(R_currentRpm);
+  Serial.print("   Rbuf: ");
+  Serial.println(Rbuf);
+  Serial.print("Left RPM : ");
+  Serial.print(L_currentRpm);
+  Serial.print("   Lbuf: ");
+  Serial.println(Lbuf);
+  //VESC_right.printVescValues();
+  //VESC_left.printVescValues();
   // set pos to 0,0 and print right data
   // set pos to 1,0 and print left data
   screen1.clear();
@@ -130,6 +165,15 @@ void updateScreens(){
   Serial.print(TotalTime);
   Serial.println("us");
   return;
+  } else {
+    Serial.println("Could not get data from VESC");
+  }
+
+  if(VESC_right.getVescValues()){
+    Serial.println("Got values from the Right one");
+  } else {
+    Serial.println("Could not get data from Right one");
+  }
 }
 
 
@@ -159,5 +203,4 @@ void initialize_screens(){
   screen3.print("initializing");
   screen4.clear();
   screen4.print("initializing");
-
 }

@@ -18,7 +18,7 @@
 #include <Servo.h>
 Servo steeringServo;
 
-#include <TFMini.h>
+#include "TFMini.h"
 TFMini Sensor1;
 TFMini Sensor2;
 
@@ -46,11 +46,11 @@ void setup() {
   steeringServo.attach(servoPIN);
 
   Serial.begin(9600);                                          // Serial with baud rate of 9600
-  Serial1.begin(115200);
-  Serial2.begin(115200);                                       // Serials for the Sensors
+  Serial3.begin(115200);
+  Serial4.begin(115200);                                       // Serials for the Sensors
   
-  Sensor1.begin(&Serial3);  // was Serial1 
-  Sensor2.begin(&Serial4);  // was Serial2                                   // Initialize Sensors with Serial
+  Sensor1.begin(&Serial3);  // was Serial1 on Mega
+  Sensor2.begin(&Serial4);  // was Serial2 on Mega             // Initialize Sensors with Serial
 
   //Sensor1.setSingleScanMode();
   //Sensor2.setSingleScanMode();                                 // Force each sensor to only read when triggered
@@ -212,18 +212,15 @@ void updateSteering(int &pulse){
  *  returns an int for the closest object to both lidar sensors
  *  return value is cm
  */
+ 
 int distanceCheck(){
   Serial.println("In distCheck");
-  static uint16_t distance_one = 0; 
-  static uint16_t distance_two = 0;               // Initialize the Variables
-  //Sensor1.externalTrigger();                      // Trigger the sensor
-  Serial.println("1");
-  distance_one = Sensor1.getDistance();           // Read Data
-  Serial.println("2");
-  //Sensor2.externalTrigger();                      // Repeat
-  Serial.println("3");
+  uint16_t distance_one = 0; 
+  uint16_t distance_two = 0;               // Initialize the Variables
+  distance_one = Sensor1.getDistance();             // Read Data
+  Serial.println(distance_one);
   distance_two = Sensor2.getDistance();
-  Serial.println("4");
+  Serial.println(distance_two);
 
   if(distance_one > distance_two){                // Return the distance to the closest object on either sensor
     return distance_one;    
