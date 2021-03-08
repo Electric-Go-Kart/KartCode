@@ -148,10 +148,7 @@ void updateScreens(){
   Serial.print(L_currentRpm);
   Serial.print("   Lbuf: ");
   Serial.println(Lbuf);
-  //VESC_right.printVescValues();
-  //VESC_left.printVescValues();
-  // set pos to 0,0 and print right data
-  // set pos to 1,0 and print left data
+
   screen1.clear();
   screen1.setCursor(0,0);
   screen1.write("Right Rpm:");
@@ -175,8 +172,6 @@ void updateScreens(){
     Serial.println("Could not get data from Right one");
   }
 }
-
-
 
 void initialize_screens(){
   // initialize all of our screens
