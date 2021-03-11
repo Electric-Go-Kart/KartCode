@@ -2,12 +2,12 @@
  *    By: Deagan Malloy
  *    
  *    PINS:
- *      VESC_left       - Serial1 - RX1 TX1 - 19, 18
- *      VESC_right      - Serial2 - RX2 TX2 - 17, 16
- *      Screens         -   I2C   - SDA SCL - 20, 21
- *      Throttle Pedal  -   ADC   - A0      - 14
- *      Brake Pressure  -   ADC   - A1      - 15
- *      Reverse Switch  - Digital - D Read  - 22
+ *      VESC_left       - Serial1 - RX1 TX1 - 0,  1
+ *      VESC_right      - Serial2 - RX2 TX2 - 7,  8
+ *      Screens         -   I2C   - SDA SCL - 18, 19
+ *      Throttle Pedal  -   ADC   - A8      - 22
+ *      Brake Pressure  -   ADC   - A9      - 23
+ *      Reverse Switch  - Digital - D Read  - 2
  */
 
 #include<VescUart.h>  // for the UART communication between VESC and MEGA
@@ -23,14 +23,14 @@ const float MAXREVERSECURRENT = 2;
 const float MAXREVERSEDUTY = .20;
 
 // Analog pin for acceleration pedal
-const int accel_in = A0;
-const int brake_in = A1;
+const int accel_in = A8;
+const int brake_in = A9;
 
 // Digital switches for switches on dash
-const int switch1 = 22;   // For Drive / Reverse Functionality
-const int switch2 = 23;
-const int switch3 = 24;
-const int switch4 = 25;
+const int switch1 = 2;   // For Drive / Reverse Functionality
+const int switch2 = 3;
+const int switch3 = 4;
+const int switch4 = 5;
 
 // Initialize the two VESCs
 VescUart VESC_left;
@@ -84,16 +84,16 @@ void loop() {
 void updateDrive(){
   static int lastRead = 260;
   long unsigned int startTime = micros();
-  int pedal = analogRead(A0); // Because we are running on 3.3V not 5V now this reads between 160-850 
-  int brake = analogRead(A1); // Read the brake input
+  int pedal = analogRead(accel_in); // Because we are running on 3.3V not 5V now this reads between 160-850 
+  int brake = analogRead(brake_in); // Read the brake input
   
   //bool driving = false;
   
   Serial.print("Pedal in: "); // around 250-800 instead of the 0-1024 on 0-5V
   Serial.println(pedal);
-  Serial.print("D/R     : ");
+  Serial.print("D/R   in: ");
   Serial.println(digitalRead(switch1));
-  Serial.print("Brake   : ");
+  Serial.print("Brake in: ");
   Serial.println(brake);
   
   float current = 0;
@@ -173,7 +173,6 @@ void updateScreens(){
     Serial.print("Time to run updateScreens: ");
     Serial.print(TotalTime);
     Serial.println("us");
-    return;
   } else {
     Serial.println("Could not get data from one of the VESCs");
   }
