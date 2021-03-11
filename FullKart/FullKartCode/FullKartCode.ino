@@ -17,11 +17,12 @@
 // Const values to be used throughout program
 const float MAXMOTORCURRENT = 10;   // Should be set to 50 once the full goKart is built
 const float MAXMOTORDUTY = .50;     // Should probably stay here once the full kart is built
-const float MAXREVERSECURRENT = 5;
+const float MAXREVERSECURRENT = 2;
 const float MAXREVERSEDUTY = .20;
 
 // Analog pin for acceleration pedal
 const int accel_in = A0;
+const int brake_in = A1;
 
 // Digital switches for switches on dash
 const int switch1 = 22;   // For Drive / Reverse Functionality
@@ -46,6 +47,10 @@ void initialize_screens();
 void updateScreens();
 void updateDrive();
 float mapping(float input, float a, float b, float c, float d);
+void updateScreen1();
+void updateScreen2();
+void updateScreen3();
+void updateScreen4();
 
 
 void setup() {
@@ -53,20 +58,21 @@ void setup() {
   while(!Serial){;}       // wait while Serial Monitor not open
   Serial1.begin(115200);  // initialize serial port 1 for VESC_left
   VESC_left.setSerialPort(&Serial1);
-  VESC_left.setDebugPort(&Serial);
+  //VESC_left.setDebugPort(&Serial);
   
   Serial2.begin(115200);  // initialize serial port 2 for VESC_right;
   VESC_right.setSerialPort(&Serial2);
-  VESC_right.setDebugPort(&Serial);
+  //VESC_right.setDebugPort(&Serial);
 
   initialize_screens();
+
+  while(!Serial){;}
 }
 
 void loop() {
    updateDrive();
-   //updateScreens();
+   updateScreens();
    //Serial.println();
-   delay(10);
 }
 
 
@@ -76,26 +82,33 @@ void loop() {
 void updateDrive(){
   static int lastRead = 260;
   long unsigned int startTime = micros();
-  int pedal = analogRead(A0); // Because we are running on 3.3V not 5V now this reads inbetween 
-
-  bool driving = false;
+  int pedal = analogRead(A0); // Because we are running on 3.3V not 5V now this reads between 160-850 
+  int brake = analogRead(A1); // Read the brake input
+  
+  //bool driving = false;
   
   Serial.print("Pedal in: "); // around 250-800 instead of the 0-1024 on 0-5V
   Serial.println(pedal);
-  Serial.print("Switch: ");
+  Serial.print("D/R     : ");
   Serial.println(digitalRead(switch1));
+  Serial.print("Brake   : ");
+  Serial.println(brake);
   
   float current = 0;
   float reverseCurrent = 0;
 
-  if(pedal > 260 && pedal < 850){ 
+  if(pedal > 260 && pedal < 850 && brake < 20){ 
     current        = mapping(pedal, 260, 850, 0, MAXMOTORCURRENT);
     reverseCurrent = mapping(pedal, 260, 850, 0, MAXREVERSECURRENT);
+  } else if(pedal > 260 && pedal < 850 && brake >= 20){
+    VESC_right.setCurrent(0);
+    VESC_left.setCurrent(0);
   } else {
     current = 0;
+    reverseCurrent = 0;
   }
     
-  if(digitalRead(switch1)){ // Forward Mode
+  if(digitalRead(switch1) == 0){ // Forward Mode
     VESC_right.setCurrent(current);
     VESC_left.setCurrent(current);
     
@@ -132,47 +145,108 @@ float mapping(float input, float a, float b, float c, float d){
 // Screen 4 - Temps of motors / batteries?
 // Patrick says MPH, Voltage and Voltage/12(each cell estimated)
 void updateScreens(){
-  if(VESC_left.getVescValues()){
-  long unsigned int startTime = micros();
-  long R_currentRpm = VESC_right.data.rpm;
-  long L_currentRpm = VESC_left.data.rpm;
-  char Rbuf[16];
-  char Lbuf[16];
-  ltoa(R_currentRpm, Rbuf, 10);
-  ltoa(L_currentRpm, Lbuf, 10);
-  Serial.print("Right RPM: ");
-  Serial.print(R_currentRpm);
-  Serial.print("   Rbuf: ");
-  Serial.println(Rbuf);
-  Serial.print("Left RPM : ");
-  Serial.print(L_currentRpm);
-  Serial.print("   Lbuf: ");
-  Serial.println(Lbuf);
+  if(VESC_left.getVescValues() || VESC_right.getVescValues()){
+    long unsigned int startTime = micros();
 
-  screen1.clear();
-  screen1.setCursor(0,0);
-  screen1.write("Right Rpm:");
-  screen1.write(Rbuf);
-  screen1.setCursor(0,1);
-  screen1.write("Left  Rpm:");
-  screen1.write(Lbuf);
+    static int screenToBeUpdated = 1;
+    switch (screenToBeUpdated) {
+      case 1:
+        updateScreen1();
+        break;
+      case 2:
+        updateScreen2();
+        break;
+      case 3:
+        updateScreen3();
+        break;
+      case 4:
+        updateScreen4();
+        break;
+    }
 
-  long unsigned int TotalTime = micros() - startTime;
-  Serial.print("Time to run updateScreens: ");
-  Serial.print(TotalTime);
-  Serial.println("us");
-  return;
+    if(++screenToBeUpdated > 4)
+    screenToBeUpdated = 1;
+
+    long unsigned int TotalTime = micros() - startTime;
+    Serial.print("Time to run updateScreens: ");
+    Serial.print(TotalTime);
+    Serial.println("us");
+    return;
   } else {
-    Serial.println("Could not get data from VESC");
-  }
-
-  if(VESC_right.getVescValues()){
-    Serial.println("Got values from the Right one");
-  } else {
-    Serial.println("Could not get data from Right one");
+    Serial.println("Could not get data from one of the VESCs");
   }
 }
 
+void updateScreen1(){
+  char Rbuf[16];
+  char Lbuf[16];
+  
+  screen1.clear();
+  screen1.setCursor(0,0);
+  screen1.write("Right Rpm:");
+  ltoa(VESC_right.data.rpm/14, Rbuf, 10);
+  screen1.write(Rbuf);
+  screen1.setCursor(0,1);
+  screen1.write("Left  Rpm:");
+  ltoa(VESC_left.data.rpm/14 , Lbuf, 10);
+  screen1.write(Lbuf);
+}
+
+void updateScreen2(){
+  char Rbuf[16];
+  char Lbuf[16];
+  
+  itoa(int(VESC_left.data.tempMotor),  Lbuf, 10); // convert left motor temp to char[] to print
+  itoa(int(VESC_right.data.tempMotor), Rbuf, 10); // convert right motor temp to char[] to print
+  screen2.clear();
+  screen2.setCursor(0,0);
+  screen2.write("Left T: ");
+  screen2.write(Lbuf);                        // print to screen2
+  screen2.setCursor(0,1);                     // set cursor to second screen
+  screen2.write("RightT: ");
+  screen2.write(Rbuf);                        // print to screen2
+  
+}
+
+void updateScreen3(){
+  char Rbuf[16];
+  char Lbuf[16];
+
+  itoa(int(VESC_left.data.avgMotorCurrent), Lbuf, 10);
+  itoa(int(VESC_right.data.avgMotorCurrent), Rbuf, 10);
+  screen3.clear();
+  screen3.setCursor(0,0);
+  screen3.write("Left : ");// averageMotorCurrent and inputVoltage
+  screen3.write(Lbuf);
+  screen3.setCursor(15,0);
+  screen3.write("A");
+  screen3.setCursor(0,1);
+  screen3.write("Right: ");
+  screen3.write(Rbuf);
+  screen3.setCursor(15,1);
+  screen3.write("A");
+  
+}
+
+void updateScreen4(){
+  char Rbuf[16];
+  char Lbuf[16];
+  
+  itoa(int(VESC_left.data.inpVoltage), Lbuf, 10);
+  itoa(int(VESC_right.data.inpVoltage), Rbuf, 10);
+  screen4.clear();
+  screen4.setCursor(0,0);
+  screen4.write("Left : ");
+  screen4.write(Lbuf);
+  screen4.setCursor(15,0);
+  screen4.write("V");
+  screen4.setCursor(0,1);
+  screen4.write("Right: ");
+  screen4.write(Rbuf);
+  screen4.setCursor(15,1);
+  screen4.write("V");
+  
+}
 void initialize_screens(){
   // initialize all of our screens
   screen1.begin(16,2);
