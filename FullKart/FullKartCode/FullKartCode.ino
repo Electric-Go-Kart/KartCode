@@ -2,10 +2,12 @@
  *    By: Deagan Malloy
  *    
  *    PINS:
- *      VESC_left   - Serial1 - RX1 TX1 - 19, 18
- *      VESC_right  - Serial2 - RX2 TX2 - 17, 16
- *      Screens     -   I2C   - SDA SCL - 20, 21
- *      "Gas" Pedal -   ADC   - A0      - A0
+ *      VESC_left       - Serial1 - RX1 TX1 - 19, 18
+ *      VESC_right      - Serial2 - RX2 TX2 - 17, 16
+ *      Screens         -   I2C   - SDA SCL - 20, 21
+ *      Throttle Pedal  -   ADC   - A0      - 14
+ *      Brake Pressure  -   ADC   - A1      - 15
+ *      Reverse Switch  - Digital - D Read  - 22
  */
 
 #include<VescUart.h>  // for the UART communication between VESC and MEGA
