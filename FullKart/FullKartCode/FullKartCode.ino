@@ -17,10 +17,10 @@
 #include<LiquidCrystal_I2C.h>
 
 // Const values to be used throughout program
-const float MAXMOTORCURRENT = 10;   // Should be set to 50 once the full goKart is built
+const float MAXMOTORCURRENT = 10;   // Should be set to 50 once the full goKart is built - absolutleMax value is around 200
 const float MAXMOTORDUTY = .50;     // Should probably stay here once the full kart is built
-const float MAXREVERSECURRENT = 2;
-const float MAXREVERSEDUTY = .20;
+const float MAXREVERSECURRENT = 2;  // Will also get larger as we have more testing, but should be less than the forward current and Duty cycle
+const float MAXREVERSEDUTY = .20;   // 
 
 // Analog pin for acceleration pedal
 const int accel_in = A8;
@@ -43,7 +43,8 @@ LiquidCrystal_I2C screen3(0x25, 2, 1, 0, 4, 5, 6, 7);
 LiquidCrystal_I2C screen4(0x24, 2, 1, 0, 4, 5, 6, 7);
 
 // to make custom characters for screen //
-uint8_t custom[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}; // hex values represent that pixels to be lit up
+uint8_t fullBox[8] = {0xf7, 0xf7, 0xf7, 0xf7, 0xf7, 0xf7, 0xf7, 0xf7}; // 
+uint8_t halfBox[8] = {0xf7, 0xf7, 0xf7, 0xf7, 0xf7, 0xf7, 0xf7, 0xf7}; // 
 
 void initialize_screens();
 void updateScreens();
@@ -66,6 +67,7 @@ void setup() {
   VESC_right.setSerialPort(&Serial2);
   //VESC_right.setDebugPort(&Serial);
 
+  // Make call to initialize the 4 LCD displays
   initialize_screens();
 
   while(!Serial){;}
@@ -74,7 +76,6 @@ void setup() {
 void loop() {
    updateDrive();
    updateScreens();
-   //Serial.println();
 }
 
 
@@ -118,13 +119,6 @@ void updateDrive(){
     VESC_right.setCurrent(-reverseCurrent);
     VESC_left.setCurrent(-reverseCurrent);
   }
-
-
-/* To update motors:    
- *    setCurrent(float)
- *    setDuty(float)
- *    setRpm(float)
- *    setBreakCurrent(float)*/
   
   long unsigned int totalTime = micros() - startTime;
   Serial.print("Time to run updateDrive: ");
@@ -141,11 +135,10 @@ float mapping(float input, float a, float b, float c, float d){
 
 
 // Function to update and display values to the screens
-// Screen 1 - Both Motors current Speed (or just avg speed of both motors)
-// Screen 2 - Battery Life left
-// Screen 3 - Avg current to both motors
-// Screen 4 - Temps of motors / batteries?
-// Patrick says MPH, Voltage and Voltage/12(each cell estimated)
+// Screen 1 - RPM of both motors
+// Screen 2 - Temp of both motors
+// Screen 3 - Current on both motors
+// Screen 4 - Voltage on both motors
 void updateScreens(){
   if(VESC_left.getVescValues() || VESC_right.getVescValues()){
     long unsigned int startTime = micros();
@@ -178,6 +171,13 @@ void updateScreens(){
   }
 }
 
+
+// The next four function are made to update 1 screen per function. 
+// This allows the screens to be updated individually instead of all in one method
+// Each screen takes roughly 20ms to update, so these cause a large delay within the bulk of the code
+// These are updated individually to help reduce the response time of the important features
+
+// Update the RPM of both motors
 void updateScreen1(){
   char Rbuf[16];
   char Lbuf[16];
@@ -193,6 +193,7 @@ void updateScreen1(){
   screen1.write(Lbuf);
 }
 
+// update the temperature of both motors
 void updateScreen2(){
   char Rbuf[16];
   char Lbuf[16];
@@ -209,6 +210,7 @@ void updateScreen2(){
   
 }
 
+// Current draw for both motors
 void updateScreen3(){
   char Rbuf[16];
   char Lbuf[16];
@@ -229,6 +231,7 @@ void updateScreen3(){
   
 }
 
+// Voltage of both motors
 void updateScreen4(){
   char Rbuf[16];
   char Lbuf[16];
@@ -248,6 +251,9 @@ void updateScreen4(){
   screen4.write("V");
   
 }
+
+// Function to Initialize the screens
+// Turns on the backlight, and prints "Initializing to all screens"
 void initialize_screens(){
   // initialize all of our screens
   screen1.begin(16,2);
