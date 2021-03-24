@@ -19,18 +19,19 @@
 // Const values to be used throughout program
 const float MAXMOTORCURRENT = 10;   // Should be set to 50 once the full goKart is built - absolutleMax value is around 200
 const float MAXMOTORDUTY = .50;     // Should probably stay here once the full kart is built
-const float MAXREVERSECURRENT = 2;  // Will also get larger as we have more testing, but should be less than the forward current and Duty cycle
+const float MAXREVERSECURRENT = 5;  // Will also get larger as we have more testing, but should be less than the forward current and Duty cycle
 const float MAXREVERSEDUTY = .20;   // 
+const float MAXBRAKECURRENT = 10;   // Max current for setBrakeCurrent()
 
-// Analog pin for acceleration pedal
+// Analog pin for acceleration pedal and brake pedal
 const int accel_in = A8;
 const int brake_in = A9;
 
 // Digital switches for switches on dash
-const int switch1 = 2;   // For Drive / Reverse Functionality
-const int switch2 = 3;
-const int switch3 = 4;
-const int switch4 = 5;
+const int switch1 = 2;    // For Drive / Reverse Functionality
+const int switch2 = 3;    // unused
+const int switch3 = 4;    // unused
+const int switch4 = 5;    // unused
 
 // Initialize the two VESCs
 VescUart VESC_left;
@@ -46,6 +47,9 @@ LiquidCrystal_I2C screen4(0x24, 2, 1, 0, 4, 5, 6, 7);
 uint8_t fullBox[8] = {0xf7, 0xf7, 0xf7, 0xf7, 0xf7, 0xf7, 0xf7, 0xf7}; // 
 uint8_t halfBox[8] = {0xf7, 0xf7, 0xf7, 0xf7, 0xf7, 0xf7, 0xf7, 0xf7}; // 
 
+// Predefine all functions within this sketch
+// Might make a header file in order to simplify this code
+//  This header will contain all of these functions
 void initialize_screens();
 void updateScreens();
 void updateDrive();
@@ -88,8 +92,6 @@ void updateDrive(){
   int pedal = analogRead(accel_in); // Because we are running on 3.3V not 5V now this reads between 160-850 
   int brake = analogRead(brake_in); // Read the brake input
   
-  //bool driving = false;
-  
   Serial.print("Pedal in: "); // around 250-800 instead of the 0-1024 on 0-5V
   Serial.println(pedal);
   Serial.print("D/R   in: ");
@@ -100,13 +102,34 @@ void updateDrive(){
   float current = 0;
   float reverseCurrent = 0;
 
-  if(pedal > 260 && pedal < 850 && brake < 20){ 
+  // No braking engaged
+  if(pedal > 260 && pedal < 800 && brake < 20){ 
     current        = mapping(pedal, 260, 850, 0, MAXMOTORCURRENT);
     reverseCurrent = mapping(pedal, 260, 850, 0, MAXREVERSECURRENT);
-  } else if(pedal > 260 && pedal < 850 && brake >= 20){
-    VESC_right.setCurrent(0);
-    VESC_left.setCurrent(0);
-  } else {
+
+  // Braking Engaged, limit the current
+  } else if(brake >= 20){ // Brakes have been engaged, need to limit driving power
+    /*int maxCurrent = mapping(brake, 0, 1024, 0, MAXMOTORCURRENT); // 0, 1024 might have to change dependi g on how the sensor works
+    current = mapping(pedal, 260, 850, 0, MAXMOTORCURRENT) - maxCurrent;
+    if(current < 0) current = 0;
+
+    int maxReverseCurrent = mapping(brake, 0, 1024, 0, MAXREVERSECURRENT);  // 0, 1024 might have to change depending on how the sensor works
+    reverseCurrent = mapping(pedal, 260, 850, 0, MAXREVERSECURRENT);
+    if(reverseCurrent < 0) reverseCurrent = 0;
+
+    Serial.print("Current: ");
+    Serial.println(current);
+    Serial.print("reverse: ");
+    Serial.println(reverseCurrent);*/
+    float brakeCurrent = mapping(brake, 0, 1024, 0, MAXBRAKECURRENT);
+    VESC_right.setBrakeCurrent(brakeCurrent);
+    VESC_left.setBrakeCurrent(brakeCurrent);
+    Serial.print("Brake Current: ");
+    Serial.println(brakeCurrent);
+    
+
+  // else default to no current
+  } else {   
     current = 0;
     reverseCurrent = 0;
   }
@@ -140,7 +163,7 @@ float mapping(float input, float a, float b, float c, float d){
 // Screen 3 - Current on both motors
 // Screen 4 - Voltage on both motors
 void updateScreens(){
-  if(VESC_left.getVescValues() || VESC_right.getVescValues()){
+  if(VESC_left.getVescValues() && VESC_right.getVescValues()){
     long unsigned int startTime = micros();
 
     static int screenToBeUpdated = 1;
@@ -166,8 +189,12 @@ void updateScreens(){
     Serial.print("Time to run updateScreens: ");
     Serial.print(TotalTime);
     Serial.println("us");
+  } else if(!VESC_right.getVescValues()) {
+    Serial.println("Could not get data from right VESC");
+  } else if(!VESC_left.getVescValues()){
+    Serial.println("Could not get data from left VESC");
   } else {
-    Serial.println("Could not get data from one of the VESCs");
+    Serial.println("Could not get data from both VESCS");
   }
 }
 
@@ -181,16 +208,18 @@ void updateScreens(){
 void updateScreen1(){
   char Rbuf[16];
   char Lbuf[16];
+
+  ltoa(VESC_right.data.rpm/14, Rbuf, 10);
+  ltoa(VESC_left.data.rpm/14 , Lbuf, 10);
   
   screen1.clear();
   screen1.setCursor(0,0);
-  screen1.write("Right Rpm:");
-  ltoa(VESC_right.data.rpm/14, Rbuf, 10);
-  screen1.write(Rbuf);
-  screen1.setCursor(0,1);
   screen1.write("Left  Rpm:");
-  ltoa(VESC_left.data.rpm/14 , Lbuf, 10);
   screen1.write(Lbuf);
+  screen1.setCursor(0,1);
+  screen1.write("Right Rpm:");
+  
+  screen1.write(Rbuf);
 }
 
 // update the temperature of both motors

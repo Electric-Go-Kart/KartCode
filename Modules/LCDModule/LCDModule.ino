@@ -22,6 +22,11 @@ uint8_t topLeft[8]  = {0x0, 0x0, 0x7, 0x8, 0x10,0x13,0x13,0x10};
 uint8_t topRight[8] = {0x0, 0x0, 0x1c,0x2, 0x1, 0x19,0x19,0x1 };
 uint8_t botLeft[8]  = {0x10,0x10,0x10,0x10,0x8, 0x7, 0x0, 0x0 }; 
 uint8_t botRight[8] = {0x1, 0x1, 0x1, 0x1, 0x2, 0x1c,0x0, 0x0 }; 
+uint8_t Full[8] = {0x1f, 0x1f, 0x1f, 0x1f, 0x1f, 0x1f, 0x1f, 0x1f};
+uint8_t Half[8] = {0x1c, 0x1c, 0x1c, 0x1c, 0x1c, 0x1c, 0x1c, 0x1c};
+uint8_t Low[8]  = {0x18, 0x18, 0x18, 0x18, 0x18, 0x18, 0x18, 0x18};
+uint8_t Left[8] = {0x03, 0x02, 0x02, 0x02, 0x02, 0x02, 0x02, 0x03};
+uint8_t Right[8]= {0x18, 0x08, 0x08, 0x0c, 0x0c, 0x08, 0x08, 0x18};
 
 void setup(){
   lcd1.begin(16, 2);
@@ -33,29 +38,49 @@ void setup(){
   lcd1.backlight();
   lcd3.backlight();
 
-  lcd1.createChar(7, circle);
-  lcd1.createChar(1, heart);
-  lcd1.createChar(2, what);
-  lcd1.createChar(3, topLeft);
-  lcd1.createChar(4, topRight);
-  lcd1.createChar(5, botLeft);
-  lcd1.createChar(6, botRight);
+  lcd1.createChar(1, Full);
+  lcd1.createChar(2, Half);
+  lcd1.createChar(3, Low);
+  lcd1.createChar(4, Left);
+  lcd1.createChar(5, Right);
 
 }
 void loop(){
-  lcd1.clear();
-  lcd1.home();
-  lcd1.write(7);
-  lcd1.write(1);
-  lcd1.setCursor(0,1);
-  lcd1.write(2);
-  lcd1.write(1);
-  
-  lcd3.clear();
-  lcd3.setCursor(0,0);
-  lcd3.print("Coding is");
-  lcd3.setCursor(0,1);
-  lcd3.print("Kind of Cool");
-  
-  delay(5000);
+  for(int i=0; i<4; i++){
+    lcd1.clear();
+    lcd1.setCursor(0,0);
+    lcd1.write("Battery: ");
+    lcd1.setCursor(2,1);
+    lcd1.write(4);
+
+    switch (i){
+      case 0:
+        lcd1.write(1);
+        lcd1.write(1);
+        lcd1.write(1);
+        lcd1.write(1);
+        break;
+
+      case 1:
+        lcd1.write(1);
+        lcd1.write(1);
+        lcd1.write(1);
+        break;
+        
+      case 2:
+        lcd1.write(1);
+        lcd1.write(2);
+        break;
+
+      case 3:
+        lcd1.write(3);
+        break;
+    }
+
+    lcd1.setCursor(8,1);
+    lcd1.write(5);
+
+    delay(2000);
+    
+  }
 }

@@ -33,6 +33,9 @@ const int PWMout1 = 7;           // These two will be the outputs for the motors
 const int PWMout2 = 6;           // Left and right motor will run at same speed by only using 2 outputs  // 11 for Mega
 const int lightsPIN = 8;         // Pin used to turn the headlights on and off   // 22 for Mega
 
+const int echoPin = 22;
+const int trigPin = 23;
+
 void setup() {
   pinMode(throttle, INPUT);
   pinMode(steer, INPUT);
@@ -110,19 +113,16 @@ void updateThrottleOut(int &pulse, int &drive_state){
     
   } else if(drive_state == 1){                    // Drive - Output High, Low to drive forward
       int maxRPM = 0;
-
-      Serial.print("Pulse: ");
-      Serial.println(pulse);
       if(pulse > 1100 && pulse < 2050) {      // Good input pulse 
         int lidarDist = distanceCheck();        // distance to closest object (in cm)
-        Serial.println(lidarDist);
         setRpm1 = map(pulse, 1100, 2050, 0, 255);
         
         if(lidarDist < 400){                    // if distance to object is too close -> set maxRPM
-          maxRPM = map(lidarDist, 0, 400, 0, 255);
-          if(setRpm1 > maxRPM)
-            setRpm1 = maxRPM;
+          maxRPM = map(lidarDist, 0, 400, 0, 255) -40;
+          if(setRpm1 > maxRPM) setRpm1 = maxRPM;
+          if(setRpm1 < 0) setRpm1 = 0;
         }
+        
       } else {                                // Bad input pulse
         setRpm1 = 0;                              // If input pulse is too slow, stay still
       }
@@ -130,15 +130,10 @@ void updateThrottleOut(int &pulse, int &drive_state){
       setRpm2 = 0;                                // Second needs to be Low to drive Forwards
       analogWrite(PWMout2, setRpm2);              // Set second PWM Low
       analogWrite(PWMout1, setRpm1);              // Set first PWM to PWM signal
-
-      Serial.print("1: ");
-      Serial.println(setRpm1);
-      Serial.print("2: ");
-      Serial.println(setRpm2);
     
   } else if(drive_state == 2){                    // Reverse - Output Low High to drive backwards (just opposite of drive)
       if(pulse > 1100 && pulse < 2050)
-        setRpm2 = map(pulse, 1100, 2050, 0, 255); // map input pulse to PWM output duty cycle between 0 and 255
+        setRpm2 = map(pulse, 1100, 2050, 0, 127); // map input pulse to PWM output duty cycle between 0 and 255
       else 
         setRpm2 = 0;                              // If input pulse is too slow, stay still
         
@@ -208,6 +203,15 @@ void updateSteering(int &pulse){
   delay(50);
 }
 
+int getUltraSonicDist(){
+  digitalWrite(trigPin, HIGH);  // trigger the ultrasonic to get distance
+  delayMicroseconds(10);
+  digitalWrite(trigPin, LOW);
+
+  int duration = pulseIn(echoPin, HIGH);  // read in pulse duration
+  return (duration*.0343)/2;    // return distance in cm
+}
+
 /*  takes in to arguments
  *  returns an int for the closest object to both lidar sensors
  *  return value is cm
@@ -221,10 +225,16 @@ int distanceCheck(){
   distance_two = Sensor2.getDistance();
   Serial.println(distance_two);
 
+  uint8_t shortestDistance = 0;
+
   if(distance_one > distance_two){                // Return the distance to the closest object on either sensor
-    return distance_one;    
+    shortestDistance = distance_one;    
   } else {
-    return distance_two;
+    shortestDistance = distance_two;
+  }
+
+  if(shortestDistance > 65530 || shortestDistance < 50){   // returned max value, could mean we are closer than 30cm
+    return getUltraSonicDist();
   }
                                                   // Measurements which are out of range will give the value 65535, which is the maximum value of a 16 bit unsigned integer.
                                                   // The range of this sensor should be 1500 cm, but has not been verified.
