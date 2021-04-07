@@ -114,13 +114,21 @@ void updateThrottleOut(int &pulse, int &drive_state) {
   } else if (drive_state == 1) {                  // Drive - Output High, Low to drive forward
     int maxRPM = 0;
     if (pulse > 1100 && pulse < 2050) {     // Good input pulse
-      int Dist = distanceCheck();        // distance to closest object (in cm)
+      uint16_t Dist = distanceCheck();        // distance to closest object (in cm)
       setRpm1 = map(pulse, 1100, 2050, 0, 255);
+      Serial.print("one: ");
+      Serial.println(setRpm1);
 
-      if (Dist < 400) {                  // if distance to object is too close -> set maxRPM
-        maxRPM = map(Dist, 0, 400, 0, 255) - 40;
+      if (Dist < 400 && Dist >= 0) {                  // if distance to object is too close -> set maxRPM
+        maxRPM = map(Dist, 0, 400, 0, 255);
+        Serial.print("Dis: ");
+        Serial.println(Dist);
+        Serial.print("Max: ");
+        Serial.println(maxRPM);
         if (setRpm1 > maxRPM) setRpm1 = maxRPM;
         if (setRpm1 < 0) setRpm1 = 0;
+        Serial.print("two: ");
+        Serial.println(setRpm1);
       }
 
     } else {                                // Bad input pulse
@@ -207,7 +215,7 @@ void updateSteering(int &pulse) {
     returns an int for the closest distance from either lidar sensors, or ultrasonic sensor
     return value is cm
 */
-int distanceCheck() {
+uint16_t distanceCheck() {
   Serial.println("In distCheck");
   uint16_t distance_one = 0;
   uint16_t distance_two = 0;               // Initialize the Variables
@@ -219,27 +227,13 @@ int distanceCheck() {
   uint8_t shortestDistance = 0;
 
   if (distance_one > distance_two) {              // Return the distance to the closest object on either sensor
-    shortestDistance = distance_one;
-  } else {
     shortestDistance = distance_two;
+  } else {
+    shortestDistance = distance_one;
   }
 
-  if (shortestDistance > 65530 || shortestDistance < 50) { // returned max value, could mean we are closer than 30cm
-    return getUltraSonicDist();
-  }
+  return shortestDistance;
+}
   // Measurements which are out of range will give the value 65535, which is the maximum value of a 16 bit unsigned integer.
   // From 0 to 30cm and 30m plus, the readings are unreliable in LiDar.
   // To overcome this, an ultrasonic sensor is used in the case of distances larger than 65530, 5 below the out of range value, and distances shorter than 50cm.
-
-/*  takes in no arguments
-    returns an int for the closest distance from ultrasonic sensor
-    return value is cm
-*/
-  int getUltraSonicDist() {
-  digitalWrite(trigPin, HIGH);  // trigger the ultrasonic to get distance
-  delayMicroseconds(10);
-  digitalWrite(trigPin, LOW);
-
-  int duration = pulseIn(echoPin, HIGH);  // read in pulse duration
-  return (duration * .0343) / 2; // return distance in cm
-}

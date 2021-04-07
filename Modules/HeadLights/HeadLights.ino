@@ -1,98 +1,142 @@
 #include <Adafruit_NeoPixel.h>
 
 Adafruit_NeoPixel strip(7,6, NEO_GRBW );
+int right;
+int left;
+int hazard;
+int brake;
 
 void setup() {
-  // put your setup code here, to run once:
-  Serial.begin(9600);
-strip.begin();
-
-strip.setPixelColor(6,0,0,0,50);
-strip.setPixelColor(2,0,0,0,50);
-strip.setPixelColor(3,100,0,0,0);
-strip.setPixelColor(5,100,0,0,0);
-strip.show();
-
-
+  pinMode(6, OUTPUT);
+  pinMode(8, INPUT);
+  pinMode(9, INPUT);
+  pinMode(10, INPUT);
+  pinMode(13, INPUT);
+  strip.begin();
+  strip.setPixelColor(6,0,0,0,100);
+  strip.setPixelColor(2,0,0,0,100);
+  strip.setPixelColor(3,100,0,0,0);
+  strip.setPixelColor(5,100,0,0,0);
+  strip.show();
 }
 
 void loop() {
-  // put your main code here, to run repeatedly:
+  right = digitalRead(9);
+  left = digitalRead(8);
+  hazard=digitalRead(10);
+  brake=digitalRead(11);
+  delay(50);
 
-  while(!Serial.available());
-  int dir=Serial.read()-'0';
-  Serial.print(dir);
-  switch(dir){
-    case 0:               
-        right();
-        break;
-    case 1:
-         left();
-        break;
-    case 2:
-      strip.setPixelColor(3,255,0,0,0);
-      strip.setPixelColor(5,255,0,0,0);
-      strip.show();
-      break;
-    case 3:
-      
-      hazard();
-      break;
-     default:
-         strip.setPixelColor(6,0,0,0,150);
-         strip.setPixelColor(2,0,0,0,150);
-         strip.setPixelColor(3,100,0,0,0);
-         strip.setPixelColor(5,100,0,0,0);
-         strip.show();
-      break;
-     
-        
-    
-    
-    
-    
-    }
+  if(hazard){
+    Shazard();
+  }
+  if(right){
+     Tright(); 
+     }
+  if (left){
+      Tleft();
+      }
+  if(brake){   
+   Tbrake();
+   }
+  else{
+   strip.setPixelColor(6,0,0,0,150);
+   strip.setPixelColor(2,0,0,0,150);
+   strip.setPixelColor(3,100,0,0,0);
+   strip.setPixelColor(5,100,0,0,0);
+   strip.show();
+   }
+   
   
 }
 
 
+void Tbrake(){
+   strip.setPixelColor(3,255,0,0,0);
+   strip.setPixelColor(5,255,0,0,0);
+   strip.setPixelColor(2,0,0,0,100);
+   strip.setPixelColor(6,0,0,0,100);
+   strip.show();
+   delay(50);
+   strip.setPixelColor(3,100,0,0,0);
+   strip.setPixelColor(5,100,0,0,0);
+   strip.setPixelColor(2,0,0,0,100);
+   strip.setPixelColor(6,0,0,0,100);
+   strip.show();
+}
 
-void right(){
-    strip.setPixelColor(2,255,90,0,0);       // 255 90 00 00 for amber
+
+void Tright(){
+  if(brake){
+    strip.setPixelColor(5,255,0,0,0);
+    strip.setPixelColor(2,255,90,0,0);       
     strip.setPixelColor(3,255,90,0,0);
+    strip.setPixelColor(6,0,0,0,100);
     strip.show();
-    delay(750);
+    delay(500);
+    strip.setPixelColor(5,255,0,0,0);
+    strip.setPixelColor(2,0,0,0,0);       
+    strip.setPixelColor(3,0,0,0,0);
+    strip.setPixelColor(6,0,0,0,100); 
+    strip.show();
+    delay(500);
+    }
+  else{
+    strip.setPixelColor(2,255,90,0,0);       
+    strip.setPixelColor(3,255,90,0,0);
+    strip.setPixelColor(6,0,0,0,100);
+    strip.setPixelColor(5,100,0,0,0);
+    strip.show();
+    delay(500);
     strip.setPixelColor(2,0,0,0,0);
     strip.setPixelColor(3,0,0,0,0);
+    strip.setPixelColor(6,0,0,0,100);
+    strip.setPixelColor(5,100,0,0,0);
     strip.show();
-    delay(750);
-  }
+    delay(500);
+   }
+}
 
-void left(){
+void Tleft(){
+    if(brake){
+    strip.setPixelColor(5,255,90,0,0);       // 255 90 00 00 for amber
+    strip.setPixelColor(6,255,90,0,0);
+    strip.setPixelColor(2,0,0,0,100);
+    strip.setPixelColor(3,255,0,0,0);
+    strip.show();
+    delay(500);
+    strip.setPixelColor(5,0,0,0,0);
+    strip.setPixelColor(6,0,0,0,0);
+    strip.setPixelColor(2,0,0,0,100);
+    strip.setPixelColor(3,100,0,0,0);
+    strip.show();
+    delay(500);
+    }
+    strip.setPixelColor(5,255,90,0,0);       // 255 90 00 00 for amber
+    strip.setPixelColor(6,255,90,0,0);
+    strip.setPixelColor(2,0,0,0,100);
+    strip.setPixelColor(3,100,0,0,0);
+    strip.show();
+    delay(500);
+    strip.setPixelColor(5,0,0,0,0);
+    strip.setPixelColor(6,0,0,0,0);
+    strip.setPixelColor(2,0,0,0,100);
+    strip.setPixelColor(3,100,0,0,0);
+    strip.show();
+    delay(500);
+}
+
+void Shazard(){
+    strip.setPixelColor(2,255,90,0,0);       // 255 90 00 00 for amber
+    strip.setPixelColor(3,255,90,0,0);
     strip.setPixelColor(5,255,90,0,0);       // 255 90 00 00 for amber
     strip.setPixelColor(6,255,90,0,0);
     strip.show();
-    delay(750);
-    strip.setPixelColor(5,0,0,0,0);
-    strip.setPixelColor(6,0,0,0,0);
-    strip.show();
-    delay(750);
-  }
-
-void hazard(){
-    strip.setPixelColor(2,255,90,0,0);       // 255 90 00 00 for amber
-    strip.setPixelColor(3,255,90,0,0);
-    strip.setPixelColor(5,255,90,0,0);       // 255 90 00 00 for amber
-    strip.setPixelColor(6,255,90,0,0);
-    strip.show();
-    delay(750);
+    delay(500);
     strip.setPixelColor(2,0,0,0,0);
     strip.setPixelColor(3,0,0,0,0);
     strip.setPixelColor(5,0,0,0,0);
     strip.setPixelColor(6,0,0,0,0);
     strip.show();
-    delay(750);
-  
-  
-  
+    delay(500);
   }
