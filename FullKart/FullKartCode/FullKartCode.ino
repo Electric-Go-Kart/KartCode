@@ -17,11 +17,11 @@
 #include<LiquidCrystal_I2C.h>
 
 // Const values to be used throughout program
-const float MAXMOTORCURRENT = 10;   // Should be set to 50 once the full goKart is built - absolutleMax value is around 200
+const float MAXMOTORCURRENT = 20;   // Should be set to 50 once the full goKart is built - absolutleMax value is around 200
 const float MAXMOTORDUTY = .50;     // Should probably stay here once the full kart is built
 const float MAXREVERSECURRENT = 5;  // Will also get larger as we have more testing, but should be less than the forward current and Duty cycle
 const float MAXREVERSEDUTY = .20;   // 
-const float MAXBRAKECURRENT = 10;   // Max current for setBrakeCurrent()
+const float MAXBRAKECURRENT = 20;   // Max current for setBrakeCurrent()
 
 // Analog pin for acceleration pedal and brake pedal
 const int accel_in = A8;
@@ -79,7 +79,7 @@ void setup() {
 
 void loop() {
    updateDrive();
-   updateScreens();
+   //updateScreens();
 }
 
 
@@ -102,14 +102,24 @@ void updateDrive(){
   float current = 0;
   float reverseCurrent = 0;
 
+  if(pedal > 300 && pedal < 1024){
+    current = mapping(pedal, 260, 850, 0, MAXMOTORCURRENT);
+    VESC_right.setCurrent(current);
+    VESC_left.setCurrent(current);
+  } else {
+    VESC_right.setBrakeCurrent(MAXBRAKECURRENT);
+    VESC_left.setBrakeCurrent(MAXBRAKECURRENT);
+  }
+
   // No braking engaged
+  /*
   if(pedal > 260 && pedal < 800 && brake < 20){ 
     current        = mapping(pedal, 260, 850, 0, MAXMOTORCURRENT);
     reverseCurrent = mapping(pedal, 260, 850, 0, MAXREVERSECURRENT);
 
   // Braking Engaged, limit the current
   } else if(brake >= 20){ // Brakes have been engaged, need to limit driving power
-    /*int maxCurrent = mapping(brake, 0, 1024, 0, MAXMOTORCURRENT); // 0, 1024 might have to change dependi g on how the sensor works
+    int maxCurrent = mapping(brake, 0, 1024, 0, MAXMOTORCURRENT); // 0, 1024 might have to change dependi g on how the sensor works
     current = mapping(pedal, 260, 850, 0, MAXMOTORCURRENT) - maxCurrent;
     if(current < 0) current = 0;
 
@@ -120,7 +130,7 @@ void updateDrive(){
     Serial.print("Current: ");
     Serial.println(current);
     Serial.print("reverse: ");
-    Serial.println(reverseCurrent);*/
+    Serial.println(reverseCurrent);
     float brakeCurrent = mapping(brake, 0, 1024, 0, MAXBRAKECURRENT);
     VESC_right.setBrakeCurrent(brakeCurrent);
     VESC_left.setBrakeCurrent(brakeCurrent);
@@ -133,15 +143,18 @@ void updateDrive(){
     current = 0;
     reverseCurrent = 0;
   }
-    
-  if(digitalRead(switch1) == 0){ // Forward Mode
+  
+  /*if(digitalRead(switch1) == 0){ // Forward Mode
     VESC_right.setCurrent(current);
     VESC_left.setCurrent(current);
     
   } else {                  // Reverse 
     VESC_right.setCurrent(-reverseCurrent);
     VESC_left.setCurrent(-reverseCurrent);
-  }
+  }*/
+
+
+  
   
   long unsigned int totalTime = micros() - startTime;
   Serial.print("Time to run updateDrive: ");

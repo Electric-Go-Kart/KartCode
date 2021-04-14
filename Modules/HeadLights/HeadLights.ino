@@ -1,142 +1,171 @@
 #include <Adafruit_NeoPixel.h>
 
-Adafruit_NeoPixel strip(7,6, NEO_GRBW );
-int right;
-int left;
-int hazard;
-int brake;
+Adafruit_NeoPixel right(20,6, NEO_GRBW ); // 20 for how many LED's
+Adafruit_NeoPixel left(20, 7, NEO_GRB);   // second number is pinout
+
+const int brakeInput = 2;
+const int leftInput = 3;
+const int rightInput = 4;
+const int hazardInput = 5;
 
 void setup() {
-  pinMode(6, OUTPUT);
-  pinMode(8, INPUT);
-  pinMode(9, INPUT);
-  pinMode(10, INPUT);
-  pinMode(13, INPUT);
-  strip.begin();
-  strip.setPixelColor(6,0,0,0,100);
-  strip.setPixelColor(2,0,0,0,100);
-  strip.setPixelColor(3,100,0,0,0);
-  strip.setPixelColor(5,100,0,0,0);
-  strip.show();
-}
+  pinMode(7,OUTPUT);
 
-void loop() {
-  right = digitalRead(9);
-  left = digitalRead(8);
-  hazard=digitalRead(10);
-  brake=digitalRead(11);
-  delay(50);
+  pinMode(2, INPUT);    // input from brake line
+  pinMode(3, INPUT);    // input from left signal
+  pinMode(4, INPUT);    // input from right signal
+  pinMode(5, INPUT);
+  
+  left.begin();
+  left.setBrightness(25);
 
-  if(hazard){
-    Shazard();
-  }
-  if(right){
-     Tright(); 
-     }
-  if (left){
-      Tleft();
-      }
-  if(brake){   
-   Tbrake();
-   }
-  else{
-   strip.setPixelColor(6,0,0,0,150);
-   strip.setPixelColor(2,0,0,0,150);
-   strip.setPixelColor(3,100,0,0,0);
-   strip.setPixelColor(5,100,0,0,0);
-   strip.show();
-   }
-   
+  right.begin();
+  right.setBrightness(25);
+
+  while(!Serial){;}
   
 }
 
-
-void Tbrake(){
-   strip.setPixelColor(3,255,0,0,0);
-   strip.setPixelColor(5,255,0,0,0);
-   strip.setPixelColor(2,0,0,0,100);
-   strip.setPixelColor(6,0,0,0,100);
-   strip.show();
-   delay(50);
-   strip.setPixelColor(3,100,0,0,0);
-   strip.setPixelColor(5,100,0,0,0);
-   strip.setPixelColor(2,0,0,0,100);
-   strip.setPixelColor(6,0,0,0,100);
-   strip.show();
-}
-
-
-void Tright(){
-  if(brake){
-    strip.setPixelColor(5,255,0,0,0);
-    strip.setPixelColor(2,255,90,0,0);       
-    strip.setPixelColor(3,255,90,0,0);
-    strip.setPixelColor(6,0,0,0,100);
-    strip.show();
-    delay(500);
-    strip.setPixelColor(5,255,0,0,0);
-    strip.setPixelColor(2,0,0,0,0);       
-    strip.setPixelColor(3,0,0,0,0);
-    strip.setPixelColor(6,0,0,0,100); 
-    strip.show();
-    delay(500);
-    }
-  else{
-    strip.setPixelColor(2,255,90,0,0);       
-    strip.setPixelColor(3,255,90,0,0);
-    strip.setPixelColor(6,0,0,0,100);
-    strip.setPixelColor(5,100,0,0,0);
-    strip.show();
-    delay(500);
-    strip.setPixelColor(2,0,0,0,0);
-    strip.setPixelColor(3,0,0,0,0);
-    strip.setPixelColor(6,0,0,0,100);
-    strip.setPixelColor(5,100,0,0,0);
-    strip.show();
-    delay(500);
-   }
-}
-
-void Tleft(){
-    if(brake){
-    strip.setPixelColor(5,255,90,0,0);       // 255 90 00 00 for amber
-    strip.setPixelColor(6,255,90,0,0);
-    strip.setPixelColor(2,0,0,0,100);
-    strip.setPixelColor(3,255,0,0,0);
-    strip.show();
-    delay(500);
-    strip.setPixelColor(5,0,0,0,0);
-    strip.setPixelColor(6,0,0,0,0);
-    strip.setPixelColor(2,0,0,0,100);
-    strip.setPixelColor(3,100,0,0,0);
-    strip.show();
-    delay(500);
-    }
-    strip.setPixelColor(5,255,90,0,0);       // 255 90 00 00 for amber
-    strip.setPixelColor(6,255,90,0,0);
-    strip.setPixelColor(2,0,0,0,100);
-    strip.setPixelColor(3,100,0,0,0);
-    strip.show();
-    delay(500);
-    strip.setPixelColor(5,0,0,0,0);
-    strip.setPixelColor(6,0,0,0,0);
-    strip.setPixelColor(2,0,0,0,100);
-    strip.setPixelColor(3,100,0,0,0);
-    strip.show();
-    delay(500);
-}
-
-void Shazard(){
-    strip.setPixelColor(2,255,90,0,0);       // 255 90 00 00 for amber
-    strip.setPixelColor(3,255,90,0,0);
-    strip.setPixelColor(5,255,90,0,0);       // 255 90 00 00 for amber
-    strip.setPixelColor(6,255,90,0,0);
-    strip.show();
-    delay(500);
-    strip.setPixelColor(2,0,0,0,0);
-    strip.setPixelColor(3,0,0,0,0);
-    strip.setPixelColor(5,0,0,0,0);
-    strip.setPixelColor(6,0,0,0,0);
-    strip.show();
-    delay(500);
+void loop() {
+  while(true){
+    Test(left);
+ 
+    Serial.println("Back in Loop");
   }
+}
+
+void Test(Adafruit_NeoPixel strip){
+  // 0-6  = Reverse
+  // 7-13 = Brake
+  // 14-20 = Turn Signal
+
+// The first round of for loops turns off the sections if they are activated
+  Serial.println("1");
+  for(int i=0; i<7; i++){
+    if(true/*Reverse*/){
+      strip.setPixelColor(i, 0,0,0);
+    } else {
+      strip.setPixelColor(i, 0,0,0);
+    }
+  }
+  Serial.println("2");
+  for(int i=7; i<14; i++){
+    if(true/*Brake*/){
+      strip.setPixelColor(i, 255,0,0);
+    } else {
+      strip.setPixelColor(i, 0,0,0);
+    }
+  }
+  Serial.println("3");
+  for(int i=14; i<21; i++){
+    if(true/*Left or Right*/){
+      strip.setPixelColor(i, 0,0,0);
+    } else {
+      strip.setPixelColor(i, 0,0,0);
+    }
+  }
+  
+  strip.show(); // show the changes
+  delay(250);   // delay 
+  Serial.println("4");
+  for(int i=0; i<7; i++){
+    if(true/*Reverse*/){
+      strip.setPixelColor(i, 255,255,255);//reversing
+    } else {
+      strip.setPixelColor(i, 255,0,0);    // not reversing
+    }
+  }
+  Serial.println("5");
+  for(int i=7; i<14; i++){
+    if(true/*Brake*/){  
+      strip.setPixelColor(i, 255,0,0);  // braking
+    } else {  
+      strip.setPixelColor(i, 0,0,0);  // not braking
+    }
+  }
+  Serial.println("6");
+  for(int i=14; i<21; i++){
+    if(true/*Left or Right*/){
+      strip.setPixelColor(i, 255,0,0);  // turning
+    } else {
+      strip.setPixelColor(i, 0,0,0);  // not turning
+    }
+  }
+  Serial.println("7");
+  strip.show();
+  Serial.println("8");
+  delay(250);
+  Serial.println("9");
+}
+
+
+void Brake(Adafruit_NeoPixel left, Adafruit_NeoPixel right){
+  int numP = left.numPixels();
+
+  for(int i=0; i<numP; i++){
+    left.setPixelColor(i, 0,0,0);
+    right.setPixelColor(i,0,0,0);
+  }
+
+  delay(250);
+
+  for(int i=0; i<numP; i++){
+    left.setPixelColor(i, 255,0,0);
+    right.setPixelColor(i,255,0,0);
+  }
+
+  delay(250);
+}
+
+void Hazard(Adafruit_NeoPixel left, Adafruit_NeoPixel right){
+    int numL = left.numPixels();
+
+    for(int i=numL/2; i<numL; i++){
+      left.setPixelColor(i,255,90,0);  // turn top half yellow
+      right.setPixelColor(i,255,90,0);
+    }
+    left.show();
+    right.show();
+
+    delay(250);
+
+    for(int i=numL/2; i<numL; i++){
+      left.setPixelColor(i, 255,0,0);
+      right.setPixelColor(i, 255,0,0);
+    }
+
+    left.show();
+    right.show();
+
+    delay(250);
+  }
+
+void LeftTurn(Adafruit_NeoPixel strip){
+  int numP = strip.numPixels();
+  
+  for(int i=0; i<numP; i++){
+    strip.setPixelColor(i, 255,90,0);
+    strip.show();
+    delay(33);
+  }
+
+  for(int i=0; i<numP; i++){
+    strip.setPixelColor(i,0,0,0);
+  }
+  strip.show();
+}
+
+void RightTurn(Adafruit_NeoPixel strip){
+  int numP = strip.numPixels();
+  
+  for(int i=numP; i>0; i--){
+    strip.setPixelColor(i, 255,90,0);
+    strip.show();
+    delay(33);
+  }
+
+  for(int i=0; i<numP; i++){
+    strip.setPixelColor(i,0,0,0);
+  }
+  strip.show();
+}
