@@ -3,7 +3,8 @@
 Adafruit_NeoPixel right(20,6, NEO_GRBW ); // 20 for how many LED's
 Adafruit_NeoPixel left(20, 7, NEO_GRB);   // second number is pinout
 
-const int brakeInput = 2;
+const int brakeInput = 9;
+const int reverseInput = 11;
 const int leftInput = 3;
 const int rightInput = 4;
 const int hazardInput = 5;
@@ -21,85 +22,96 @@ void setup() {
 
   right.begin();
   right.setBrightness(25);
-
-  while(!Serial){;}
-  
 }
 
 void loop() {
-  while(true){
-    Test(left);
- 
-    Serial.println("Back in Loop");
-  }
+  Test(left);
 }
 
-void Test(Adafruit_NeoPixel strip){
+void Test(Adafruit_NeoPixel &strip){
   // 0-6  = Reverse
   // 7-13 = Brake
   // 14-20 = Turn Signal
 
 // The first round of for loops turns off the sections if they are activated
-  Serial.println("1");
-  for(int i=0; i<7; i++){
-    if(true/*Reverse*/){
-      strip.setPixelColor(i, 0,0,0);
-    } else {
-      strip.setPixelColor(i, 0,0,0);
+
+  bool Reverse = digitalRead(reverseInput);
+  bool Brake   = digitalRead(brakeInput);
+  bool Hazard  = digitalRead(hazardInput);
+
+  for(int i=0; i<21; i++){
+    if(Hazard){   // if hazards, make whole strip flashing yellow
+      strip.setPixelColor(i, 255,90,0);
+      continue;
     }
-  }
-  Serial.println("2");
-  for(int i=7; i<14; i++){
-    if(true/*Brake*/){
+    
+    if(i<7 && Reverse){
+      strip.setPixelColor(i,255,255,255);
+    } else if (i<7) {
+      strip.setPixelColor(i,0,0,0);
+    }
+
+    if(i>=7 && i<14 && Brake){
       strip.setPixelColor(i, 255,0,0);
-    } else {
+    } else if(i>=7 && i<14){
       strip.setPixelColor(i, 0,0,0);
     }
-  }
-  Serial.println("3");
-  for(int i=14; i<21; i++){
-    if(true/*Left or Right*/){
-      strip.setPixelColor(i, 0,0,0);
-    } else {
-      strip.setPixelColor(i, 0,0,0);
+
+    if(i>=14 && Hazard){
+      strip.setPixelColor(i, 255,90,0);
+    } else if(i>=14){
+      strip.setPixelColor(i, 0,0,0); 
+    }
+
+    if(!Reverse && !Brake){
+      strip.setPixelColor(i, 255,0,0);
+      strip.setBrightness(10);
     }
   }
+  if(Reverse || Brake || Hazard) 
+    strip.setBrightness(255);
   
   strip.show(); // show the changes
-  delay(250);   // delay 
-  Serial.println("4");
-  for(int i=0; i<7; i++){
-    if(true/*Reverse*/){
-      strip.setPixelColor(i, 255,255,255);//reversing
-    } else {
-      strip.setPixelColor(i, 255,0,0);    // not reversing
+  delay(200);   // delay 
+
+  for(int i=0; i<21; i++){
+    if(Hazard){
+      strip.setPixelColor(i, 0,0,0);
+      continue;
+    }
+    
+    if(i<7 && Reverse){
+      strip.setPixelColor(i, 255,255,255);
+    } else if(i<7) {
+      strip.setPixelColor(i, 0,0,0);
+    }
+
+    if(i>=7 && i<14 && Brake){
+      strip.setPixelColor(i, 255,0,0);
+    } else if(i>=7 && i<14) {
+      strip.setPixelColor(i, 0,0,0);
+    }
+
+    if(i>=14 && Hazard){
+      strip.setPixelColor(i, 255,90,0);
+    } else if(i>=14) {
+      strip.setPixelColor(i, 0,0,0);
+    }
+
+    if(!Reverse && !Brake){
+      strip.setPixelColor(i, 255,0,0);
+      strip.setBrightness(10);
     }
   }
-  Serial.println("5");
-  for(int i=7; i<14; i++){
-    if(true/*Brake*/){  
-      strip.setPixelColor(i, 255,0,0);  // braking
-    } else {  
-      strip.setPixelColor(i, 0,0,0);  // not braking
-    }
-  }
-  Serial.println("6");
-  for(int i=14; i<21; i++){
-    if(true/*Left or Right*/){
-      strip.setPixelColor(i, 255,0,0);  // turning
-    } else {
-      strip.setPixelColor(i, 0,0,0);  // not turning
-    }
-  }
-  Serial.println("7");
+
+  if(Reverse || Brake || Hazard) 
+    strip.setBrightness(255);
   strip.show();
-  Serial.println("8");
-  delay(250);
-  Serial.println("9");
+  delay(200);  
 }
 
 
-void Brake(Adafruit_NeoPixel left, Adafruit_NeoPixel right){
+void Brake(Adafruit_NeoPixel &left, Adafruit_NeoPixel &right){
   int numP = left.numPixels();
 
   for(int i=0; i<numP; i++){
@@ -117,7 +129,7 @@ void Brake(Adafruit_NeoPixel left, Adafruit_NeoPixel right){
   delay(250);
 }
 
-void Hazard(Adafruit_NeoPixel left, Adafruit_NeoPixel right){
+void Hazard(Adafruit_NeoPixel &left, Adafruit_NeoPixel &right){
     int numL = left.numPixels();
 
     for(int i=numL/2; i<numL; i++){
@@ -140,7 +152,7 @@ void Hazard(Adafruit_NeoPixel left, Adafruit_NeoPixel right){
     delay(250);
   }
 
-void LeftTurn(Adafruit_NeoPixel strip){
+void LeftTurn(Adafruit_NeoPixel &strip){
   int numP = strip.numPixels();
   
   for(int i=0; i<numP; i++){
@@ -155,7 +167,7 @@ void LeftTurn(Adafruit_NeoPixel strip){
   strip.show();
 }
 
-void RightTurn(Adafruit_NeoPixel strip){
+void RightTurn(Adafruit_NeoPixel &strip){
   int numP = strip.numPixels();
   
   for(int i=numP; i>0; i--){
