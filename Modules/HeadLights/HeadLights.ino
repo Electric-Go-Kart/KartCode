@@ -39,75 +39,78 @@ void Test(Adafruit_NeoPixel &strip){
   bool Brake   = digitalRead(brakeInput);
   bool Hazard  = digitalRead(hazardInput);
 
+  bool s1 = digitalRead(2); // s1 = right turn signal
+  bool s2 = digitalRead(3); // s2 = left turn signal
+  bool s3 = digitalRead(4); // s3 = 
+
+  Serial.print("Re: ");
+  Serial.println(Reverse);
+  Serial.print("Br: ");
+  Serial.println(Brake);
+  Serial.print("Ha: ");
+  Serial.println(Hazard);
+  Serial.print("s1: ");
+  Serial.println(s1);
+  Serial.print("s2: ");
+  Serial.println(s2);
+  Serial.print("s3: ");
+  Serial.println(s3);
+  Serial.println();
+
+
+
   for(int i=0; i<21; i++){
-    if(Hazard){   // if hazards, make whole strip flashing yellow
+    if(Hazard){
       strip.setPixelColor(i, 255,90,0);
-      continue;
-    }
-    
-    if(i<7 && Reverse){
-      strip.setPixelColor(i,255,255,255);
-    } else if (i<7) {
-      strip.setPixelColor(i,0,0,0);
-    }
 
-    if(i>=7 && i<14 && Brake){
-      strip.setPixelColor(i, 255,0,0);
-    } else if(i>=7 && i<14){
-      strip.setPixelColor(i, 0,0,0);
-    }
+    } else if(!s1 && !s2 && !s3 && !Reverse && !Brake){
+      strip.setPixelColor(i, 0,255,0);
+    } else {
+      if(i<7 && s1){  // update right turn signal
+        strip.setPixelColor(i, 255,90,0);
+      } else if(i<7){
+        strip.setPixelColor(i, 0,0,0);
+      }
 
-    if(i>=14 && Hazard){
-      strip.setPixelColor(i, 255,90,0);
-    } else if(i>=14){
-      strip.setPixelColor(i, 0,0,0); 
-    }
+      /*if(i<7 && s2){  // update left turn signal
+        strip.setPixelColor(i, 255,90,0);
+      } else if(i<7){
+        strip.setPixelColor(i, 0,0,0);
+      }*/
+      
+      if(i>=7 && i<14 && Brake){  // update brakes
+        strip.setPixelColor(i, 255,0,0);
+      } else if(i>=7 && i<14){
+        strip.setPixelColor(i, 0,0,0);
+      }
 
-    if(!Reverse && !Brake){
-      strip.setPixelColor(i, 255,0,0);
-      strip.setBrightness(10);
+      if(i>=14 && Reverse){
+        strip.setPixelColor(i, 255,255,255);
+      } else if(i>=14){
+        strip.setPixelColor(i, 0,0,0);
+      }
     }
   }
-  if(Reverse || Brake || Hazard) 
-    strip.setBrightness(255);
   
-  strip.show(); // show the changes
-  delay(200);   // delay 
+  strip.show();
+  delay(200);
 
   for(int i=0; i<21; i++){
     if(Hazard){
       strip.setPixelColor(i, 0,0,0);
-      continue;
-    }
-    
-    if(i<7 && Reverse){
-      strip.setPixelColor(i, 255,255,255);
-    } else if(i<7) {
-      strip.setPixelColor(i, 0,0,0);
-    }
 
-    if(i>=7 && i<14 && Brake){
-      strip.setPixelColor(i, 255,0,0);
-    } else if(i>=7 && i<14) {
-      strip.setPixelColor(i, 0,0,0);
-    }
-
-    if(i>=14 && Hazard){
-      strip.setPixelColor(i, 255,90,0);
-    } else if(i>=14) {
-      strip.setPixelColor(i, 0,0,0);
-    }
-
-    if(!Reverse && !Brake){
-      strip.setPixelColor(i, 255,0,0);
-      strip.setBrightness(10);
+    } else if(!s1 && !s2 && !s3 && !Reverse && !Brake){
+      strip.setPixelColor(i, 7,10,245);
+      
+    } else {
+      if(i<7){
+        strip.setPixelColor(i, 0,0,0);
+      }
     }
   }
-
-  if(Reverse || Brake || Hazard) 
-    strip.setBrightness(255);
+  
   strip.show();
-  delay(200);  
+  delay(200);
 }
 
 

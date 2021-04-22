@@ -17,11 +17,11 @@
 #include<LiquidCrystal_I2C.h>
 
 // Const values to be used throughout program
-const float MAXMOTORCURRENT = 20;   // Should be set to 50 once the full goKart is built - absolutleMax value is around 200
+const float MAXMOTORCURRENT = 50;   // Should be set to 50 once the full goKart is built - absolutleMax value is around 200
 const float MAXMOTORDUTY = .50;     // Should probably stay here once the full kart is built
 const float MAXREVERSECURRENT = 5;  // Will also get larger as we have more testing, but should be less than the forward current and Duty cycle
 const float MAXREVERSEDUTY = .20;   // 
-const float MAXBRAKECURRENT = 20;   // Max current for setBrakeCurrent()
+const float MAXBRAKECURRENT = 50;   // Max current for setBrakeCurrent()
 
 // Analog pin for acceleration pedal and brake pedal
 const int accel_in = A8;
@@ -30,8 +30,8 @@ const int brake_in = A9;
 // Digital switches for switches on dash
 const int switch1 = 2;    // For Drive / Reverse Functionality
 const int switch2 = 3;    // unused
-const int switch3 = 4;    // unused
-const int switch4 = 5;    // unused
+const int switch3 = 4;    // Headlights on
+const int switch4 = 5;    // For limited mode - max current cut in half
 
 // Initialize the two VESCs
 VescUart VESC_left;
@@ -44,8 +44,13 @@ LiquidCrystal_I2C screen3(0x25, 2, 1, 0, 4, 5, 6, 7);
 LiquidCrystal_I2C screen4(0x24, 2, 1, 0, 4, 5, 6, 7);
 
 // to make custom characters for screen //
-uint8_t fullBox[8] = {0xf7, 0xf7, 0xf7, 0xf7, 0xf7, 0xf7, 0xf7, 0xf7}; // 
-uint8_t halfBox[8] = {0xf7, 0xf7, 0xf7, 0xf7, 0xf7, 0xf7, 0xf7, 0xf7}; // 
+uint8_t fullBox[8] = {0xf7, 0xf7, 0xf7, 0xf7, 0xf7, 0xf7, 0xf7, 0xf7}; 
+uint8_t halfBox[8] = {0xf7, 0xf7, 0xf7, 0xf7, 0xf7, 0xf7, 0xf7, 0xf7}; 
+uint8_t Full[8]    = {0x1f, 0x1f, 0x1f, 0x1f, 0x1f, 0x1f, 0x1f, 0x1f};
+uint8_t Half[8]    = {0x1c, 0x1c, 0x1c, 0x1c, 0x1c, 0x1c, 0x1c, 0x1c};
+uint8_t Low[8]     = {0x18, 0x18, 0x18, 0x18, 0x18, 0x18, 0x18, 0x18};
+uint8_t Left[8]    = {0x03, 0x02, 0x02, 0x02, 0x02, 0x02, 0x02, 0x03};
+uint8_t Right[8]   = {0x18, 0x08, 0x08, 0x0c, 0x0c, 0x08, 0x08, 0x18};
 
 // Predefine all functions within this sketch
 // Might make a header file in order to simplify this code
@@ -59,7 +64,6 @@ void updateScreen2();
 void updateScreen3();
 void updateScreen4();
 
-
 void setup() {
   Serial.begin(9600);     // baud rate for Serial Monitor for debugging
   while(!Serial){;}       // wait while Serial Monitor not open
@@ -71,6 +75,13 @@ void setup() {
   VESC_right.setSerialPort(&Serial2);
   //VESC_right.setDebugPort(&Serial);
 
+  // Create custom Characters
+  screen4.createChar(1, Full);
+  screen4.createChar(2, Half);
+  screen4.createChar(3, Low);
+  screen4.createChar(4, Left);
+  screen4.createChar(5, Right);
+
   // Make call to initialize the 4 LCD displays
   initialize_screens();
 
@@ -79,7 +90,7 @@ void setup() {
 
 void loop() {
    updateDrive();
-   //updateScreens();
+   updateScreens();
 }
 
 
@@ -102,11 +113,24 @@ void updateDrive(){
   float current = 0;
   float reverseCurrent = 0;
 
-  if(pedal > 300 && pedal < 1024){
-    current = mapping(pedal, 260, 850, 0, MAXMOTORCURRENT);
+/* Need to add in a safety feature to not allow immediate switch from forward to reverse while kart is moving
+ *  
+ */
+ 
+  if(pedal > 300 && pedal < 1024){  // We have stepped on the gas
+    if(digitalRead(switch1)){         // have toggled the reverse switch
+      current = -mapping(pedal, 260, 850, 0, MAXREVERSECURRENT); // sets current to negative current for reverse
+    } else {                          // are still in Drive
+      current = mapping(pedal, 260, 850, 0, MAXMOTORCURRENT);        // sets current to positive for drive
+    }
     VESC_right.setCurrent(current);
     VESC_left.setCurrent(current);
-  } else {
+
+
+/*  Need to add in sequential braking so that
+ *  the kart uses more current to brake at higher speeds
+ */
+  } else {    // We are not stepping down on pedal, so apply braking through motors
     VESC_right.setBrakeCurrent(MAXBRAKECURRENT);
     VESC_left.setBrakeCurrent(MAXBRAKECURRENT);
   }
@@ -153,8 +177,6 @@ void updateDrive(){
     VESC_left.setCurrent(-reverseCurrent);
   }*/
 
-
-  
   
   long unsigned int totalTime = micros() - startTime;
   Serial.print("Time to run updateDrive: ");
@@ -231,7 +253,6 @@ void updateScreen1(){
   screen1.write(Lbuf);
   screen1.setCursor(0,1);
   screen1.write("Right Rpm:");
-  
   screen1.write(Rbuf);
 }
 
@@ -259,6 +280,7 @@ void updateScreen3(){
 
   itoa(int(VESC_left.data.avgMotorCurrent), Lbuf, 10);
   itoa(int(VESC_right.data.avgMotorCurrent), Rbuf, 10);
+  
   screen3.clear();
   screen3.setCursor(0,0);
   screen3.write("Left : ");// averageMotorCurrent and inputVoltage
@@ -274,8 +296,71 @@ void updateScreen3(){
 }
 
 // Voltage of both motors
+// This needs to be updated to show battery life remaining
+// 50.4 - 42 Volts - 43V means cutoff power
 void updateScreen4(){
-  char Rbuf[16];
+  // going to have 8 battery "cells"
+  // [12345678]:
+  // every 1V step down the battery
+  // 50.4 - 49.4 - 48.4 - 47.4 - 46.4 - 45.4 - 44.4 - then ^
+  // Last cell contains 44.4V - at 43.8V step down to half bar, at 43.2 step down to small bar
+  //  at 43.1V show tiny amount left
+  //  at 43V   cut power to motors
+  // then for the last one, step it down from full to half, to almost out
+  float voltageLeft = VESC_left.data.inpVoltage;
+  float voltageRight= VESC_right.data.inpVoltage;
+
+  float batteryV = 0;
+
+  if(voltageLeft < voltageRight) batteryV = voltageLeft;
+  else batteryV = voltageRight;
+
+  batteryV = 52.0;
+
+  screen4.clear();
+  screen4.setCursor(0,0);
+  screen4.write("Battery: ");
+  //add in spot for battery percentage
+  
+  screen4.setCursor(0,1); // write the left side of battery
+  screen4.write(4);
+  screen4.setCursor(0,8); // write the right side of the battery
+  screen4.write(5);
+  screen4.setCursor(1,7);
+
+  if(batteryV > 49.4) screen4.write(1);
+  else screen4.write(" ");
+
+  screen4.setCursor(1,6);
+  if(batteryV > 48.4) screen4.write(1);
+  else screen4.write(" ");
+
+  screen4.setCursor(1,5);
+  if(batteryV > 47.4) screen4.write(1);
+  else screen4.write(" ");
+
+  screen4.setCursor(1,4);
+  if(batteryV > 46.4) screen4.write(1);
+  else screen4.write(" ");
+
+  screen4.setCursor(1,3);
+  if(batteryV > 45.4) screen4.write(1);
+  else screen4.write(" ");
+
+  screen4.setCursor(1,2);
+  if(batteryV > 44.4) screen4.write(1);
+  else if(batteryV > 43.8) screen4.write(2);
+  else if(batteryV > 43.2) screen4.write(3);
+  else {  // Battery is too low, cut power to motors
+    screen4.write(" ");
+    // CUT POWER TO MOTORS BATTERY IS EMPTY
+  }
+  
+  
+
+  
+  
+  /*char Rbuf[16];
   char Lbuf[16];
   
   itoa(int(VESC_left.data.inpVoltage), Lbuf, 10);
@@ -290,7 +375,7 @@ void updateScreen4(){
   screen4.write("Right: ");
   screen4.write(Rbuf);
   screen4.setCursor(15,1);
-  screen4.write("V");
+  screen4.write("V");*/
   
 }
 
