@@ -17,7 +17,7 @@
 #include<LiquidCrystal_I2C.h>
 
 // Const values to be used throughout program
-const float MAXMOTORCURRENT = 100;   // Should be set to 50 once the full goKart is built - absolutleMax value is around 200
+const float MAXMOTORCURRENT = 50;   // Should be set to 50 once the full goKart is built - absolutleMax value is around 200
 const float MAXMOTORDUTY = .35;     // Should probably stay here once the full kart is built
 const float MAXREVERSECURRENT = 5;  // Will also get larger as we have more testing, but should be less than the forward current and Duty cycle
 const float MAXREVERSEDUTY = .20;   // 
@@ -34,7 +34,7 @@ const int switch3 = 4;    // Headlights on
 const int switch4 = 5;    // For limited mode - max current cut in half
 
 // Initialize the two VESCs
-VescUart VESC_left;
+VescUart VESC_left; 
 VescUart VESC_right;
 
 // Initialize every screen
@@ -53,8 +53,8 @@ uint8_t Left[8]    = {0x03, 0x02, 0x02, 0x02, 0x02, 0x02, 0x02, 0x03};
 uint8_t Right[8]   = {0x18, 0x08, 0x08, 0x0c, 0x0c, 0x08, 0x08, 0x18};
 
 // Predefine all functions within this sketch
-// Might make a header file in order to simplify this code
-//  This header will contain all of these functions
+// Might make a seperate file in order to simplify this code
+//  That header will contain all of these functions
 void initialize_screens();
 void updateScreens();
 void updateDrive();
@@ -114,38 +114,32 @@ void updateDrive(){
 /* Need to add in a safety feature to not allow immediate switch from forward to reverse while kart is moving
  *  
  */
-  if(!VESC_right.getVescValues()) {
-    Serial.println("Could not get values");
-    return;
-  }
-  
   if(pedal > 350 && pedal < 1024){  // We have stepped on the gas
-    if(digitalRead(switch1)){         // have toggled the reverse switch
-      current = -mapping(pedal, 350, 1024, 0, MAXREVERSECURRENT);   // sets current to negative current for reverse
+    if(/*digitalRead(switch1)*/false){         // have toggled the reverse switch
+      current = -mapping(pedal, 0, 1024, 0, MAXREVERSECURRENT);   // sets current to negative current for reverse
     } else {                          // are still in Drive
-      current = mapping(pedal, 350, 1024, 0, MAXMOTORCURRENT);      // sets current to positive for drive
+      current = mapping(pedal, 0, 1024, 0, MAXMOTORCURRENT);      // sets current to positive for drive
     }
 
     VESC_right.setCurrent(current);
-    VESC_left.setCurrent(current);
+    VESC_left.setCurrent(current); 
 
     Serial.print("Current being set: ");
     Serial.println(current);
-    Serial.print("");
+    Serial.println("");
 
 /*  Need to add in sequential braking so that
  *  the kart uses more current to brake at higher speeds
  */
- 
-  } else if(pedal > 290){
-    VESC_right.setCurrent(0);
-    VESC_left.setCurrent(0);
+  //} else if(pedal > 290){    
+  //  VESC_right.setCurrent(0);
+  //  VESC_left.setCurrent(0); 
   
   } else {    // We are not stepping down on pedal, so apply braking through motors
     VESC_right.setBrakeCurrent(MAXBRAKECURRENT);
     VESC_left.setBrakeCurrent(MAXBRAKECURRENT);
   }
-
+  
   // No braking engaged
   /*
   if(pedal > 260 && pedal < 800 && brake < 20){ 
