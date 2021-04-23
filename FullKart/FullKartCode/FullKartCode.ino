@@ -34,7 +34,7 @@ const int switch3 = 4;    // Headlights on
 const int switch4 = 5;    // For limited mode - max current cut in half
 
 // Initialize the two VESCs
-//VescUart VESC_left;
+VescUart VESC_left;
 VescUart VESC_right;
 
 // Initialize every screen
@@ -383,9 +383,9 @@ void updateScreen4(){
   screen4.write("Right: ");
   screen4.write(Rbuf);
   screen4.setCursor(15,1);
-  screen4.write("V");*/
+  screen4.write("V");
   
-//}
+}
 
 // Function to Initialize the screens
 // Turns on the backlight, and prints "Initializing to all screens"
