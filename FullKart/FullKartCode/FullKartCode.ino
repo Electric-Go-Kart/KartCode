@@ -5,7 +5,7 @@
  *      VESC_left       - Serial1 - RX1 TX1 - 0,  1
  *      VESC_right      - Serial2 - RX2 TX2 - 7,  8
  *      Screens         -   I2C   - SDA SCL - 18, 19
- *      Throttle Pedal  -   ADC   - A8      - 22
+ *      Throttle Pedal  -   ADC   - A8      - 20
  *      Brake Pressure  -   ADC   - A9      - 23
  *      Reverse Switch  - Digital - D Read  - 2
  */
@@ -17,14 +17,14 @@
 #include<LiquidCrystal_I2C.h>
 
 // Const values to be used throughout program
-const float MAXMOTORCURRENT = 50;   // Should be set to 50 once the full goKart is built - absolutleMax value is around 200
-const float MAXMOTORDUTY = .50;     // Should probably stay here once the full kart is built
+const float MAXMOTORCURRENT = 100;   // Should be set to 50 once the full goKart is built - absolutleMax value is around 200
+const float MAXMOTORDUTY = .35;     // Should probably stay here once the full kart is built
 const float MAXREVERSECURRENT = 5;  // Will also get larger as we have more testing, but should be less than the forward current and Duty cycle
 const float MAXREVERSEDUTY = .20;   // 
-const float MAXBRAKECURRENT = 50;   // Max current for setBrakeCurrent()
+const float MAXBRAKECURRENT = 10;   // Max current for setBrakeCurrent()
 
 // Analog pin for acceleration pedal and brake pedal
-const int accel_in = A8;
+const int accel_in = A6;
 const int brake_in = A9;
 
 // Digital switches for switches on dash
@@ -34,7 +34,7 @@ const int switch3 = 4;    // Headlights on
 const int switch4 = 5;    // For limited mode - max current cut in half
 
 // Initialize the two VESCs
-VescUart VESC_left;
+//VescUart VESC_left;
 VescUart VESC_right;
 
 // Initialize every screen
@@ -66,7 +66,7 @@ void updateScreen4();
 
 void setup() {
   Serial.begin(9600);     // baud rate for Serial Monitor for debugging
-  while(!Serial){;}       // wait while Serial Monitor not open
+  //while(!Serial){;}       // wait while Serial Monitor not open
   Serial1.begin(115200);  // initialize serial port 1 for VESC_left
   VESC_left.setSerialPort(&Serial1);
   //VESC_left.setDebugPort(&Serial);
@@ -84,8 +84,6 @@ void setup() {
 
   // Make call to initialize the 4 LCD displays
   initialize_screens();
-
-  while(!Serial){;}
 }
 
 void loop() {
@@ -116,20 +114,33 @@ void updateDrive(){
 /* Need to add in a safety feature to not allow immediate switch from forward to reverse while kart is moving
  *  
  */
- 
-  if(pedal > 300 && pedal < 1024){  // We have stepped on the gas
+  if(!VESC_right.getVescValues()) {
+    Serial.println("Could not get values");
+    return;
+  }
+  
+  if(pedal > 350 && pedal < 1024){  // We have stepped on the gas
     if(digitalRead(switch1)){         // have toggled the reverse switch
-      current = -mapping(pedal, 260, 850, 0, MAXREVERSECURRENT); // sets current to negative current for reverse
+      current = -mapping(pedal, 350, 1024, 0, MAXREVERSECURRENT);   // sets current to negative current for reverse
     } else {                          // are still in Drive
-      current = mapping(pedal, 260, 850, 0, MAXMOTORCURRENT);        // sets current to positive for drive
+      current = mapping(pedal, 350, 1024, 0, MAXMOTORCURRENT);      // sets current to positive for drive
     }
+
     VESC_right.setCurrent(current);
     VESC_left.setCurrent(current);
 
+    Serial.print("Current being set: ");
+    Serial.println(current);
+    Serial.print("");
 
 /*  Need to add in sequential braking so that
  *  the kart uses more current to brake at higher speeds
  */
+ 
+  } else if(pedal > 290){
+    VESC_right.setCurrent(0);
+    VESC_left.setCurrent(0);
+  
   } else {    // We are not stepping down on pedal, so apply braking through motors
     VESC_right.setBrakeCurrent(MAXBRAKECURRENT);
     VESC_left.setBrakeCurrent(MAXBRAKECURRENT);
@@ -198,8 +209,14 @@ float mapping(float input, float a, float b, float c, float d){
 // Screen 3 - Current on both motors
 // Screen 4 - Voltage on both motors
 void updateScreens(){
-  if(VESC_left.getVescValues() && VESC_right.getVescValues()){
+  bool leftGood = VESC_left.getVescValues();
+  bool rightGood = VESC_right.getVescValues();
+  
+  if(leftGood && rightGood){
     long unsigned int startTime = micros();
+
+    Serial.print("Voltage remaining: ");
+    Serial.println(VESC_right.data.inpVoltage);
 
     static int screenToBeUpdated = 1;
     switch (screenToBeUpdated) {
@@ -218,18 +235,22 @@ void updateScreens(){
     }
 
     if(++screenToBeUpdated > 4)
-    screenToBeUpdated = 1;
+      screenToBeUpdated = 1;
+    Serial.print("Screen num: ");
+    Serial.println(screenToBeUpdated);
 
     long unsigned int TotalTime = micros() - startTime;
     Serial.print("Time to run updateScreens: ");
     Serial.print(TotalTime);
     Serial.println("us");
-  } else if(!VESC_right.getVescValues()) {
-    Serial.println("Could not get data from right VESC");
-  } else if(!VESC_left.getVescValues()){
+  } else if(!leftGood && !rightGood) {
+    Serial.println("Could not get data from both VESCs");
+  } else if(!leftGood){
     Serial.println("Could not get data from left VESC");
+  } else if(!rightGood){
+    Serial.println("Could not get data from right VESC");
   } else {
-    Serial.println("Could not get data from both VESCS");
+    Serial.println("Something is fucked up");
   }
 }
 
@@ -270,7 +291,6 @@ void updateScreen2(){
   screen2.setCursor(0,1);                     // set cursor to second screen
   screen2.write("RightT: ");
   screen2.write(Rbuf);                        // print to screen2
-  
 }
 
 // Current draw for both motors
@@ -299,14 +319,6 @@ void updateScreen3(){
 // This needs to be updated to show battery life remaining
 // 50.4 - 42 Volts - 43V means cutoff power
 void updateScreen4(){
-  // going to have 8 battery "cells"
-  // [12345678]:
-  // every 1V step down the battery
-  // 50.4 - 49.4 - 48.4 - 47.4 - 46.4 - 45.4 - 44.4 - then ^
-  // Last cell contains 44.4V - at 43.8V step down to half bar, at 43.2 step down to small bar
-  //  at 43.1V show tiny amount left
-  //  at 43V   cut power to motors
-  // then for the last one, step it down from full to half, to almost out
   float voltageLeft = VESC_left.data.inpVoltage;
   float voltageRight= VESC_right.data.inpVoltage;
 
@@ -356,11 +368,7 @@ void updateScreen4(){
     // CUT POWER TO MOTORS BATTERY IS EMPTY
   }
   
-  
-
-  
-  
-  /*char Rbuf[16];
+  char Rbuf[16];
   char Lbuf[16];
   
   itoa(int(VESC_left.data.inpVoltage), Lbuf, 10);
@@ -377,7 +385,7 @@ void updateScreen4(){
   screen4.setCursor(15,1);
   screen4.write("V");*/
   
-}
+//}
 
 // Function to Initialize the screens
 // Turns on the backlight, and prints "Initializing to all screens"
