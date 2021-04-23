@@ -17,7 +17,7 @@
 #include<LiquidCrystal_I2C.h>
 
 // Const values to be used throughout program
-const float MAXMOTORCURRENT = 100;   // Should be set to 50 once the full goKart is built - absolutleMax value is around 200
+const float MAXMOTORCURRENT = 50;   // Should be set to 50 once the full goKart is built - absolutleMax value is around 200
 const float MAXMOTORDUTY = .35;     // Should probably stay here once the full kart is built
 const float MAXREVERSECURRENT = 5;  // Will also get larger as we have more testing, but should be less than the forward current and Duty cycle
 const float MAXREVERSEDUTY = .20;   // 
