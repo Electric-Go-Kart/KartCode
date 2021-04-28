@@ -8,6 +8,10 @@
  *      Throttle Pedal  -   ADC   - A8      - 20
  *      Brake Pressure  -   ADC   - A9      - 23
  *      Reverse Switch  - Digital - D Read  - 2
+ *      Unused          -         -         - 3
+ *      Headlight Sw    - Digital - D Read  - 4
+ *      Limit Speed Sw  - Digital - D Read  - 5
+ *      Pin for Fans    - PWM     - PWM out - 6
  */
 
 #include<VescUart.h>  // for the UART communication between VESC and MEGA
@@ -17,11 +21,11 @@
 #include<LiquidCrystal_I2C.h>
 
 // Const values to be used throughout program
-const float MAXMOTORCURRENT = 50;   // Should be set to 50 once the full goKart is built - absolutleMax value is around 200
-const float MAXMOTORDUTY = .35;     // Should probably stay here once the full kart is built
-const float MAXREVERSECURRENT = 5;  // Will also get larger as we have more testing, but should be less than the forward current and Duty cycle
-const float MAXREVERSEDUTY = .20;   // 
-const float MAXBRAKECURRENT = 10;   // Max current for setBrakeCurrent()
+const float MAXMOTORCURRENT = 100;  // Absolute max per motor should be 150A
+const float MAXMOTORDUTY = .35;     // NOT USED CURRENTLY - planning on doing error checking if we go over certain duty cycle on motors
+const float MAXREVERSECURRENT = 5;  // Absolute max per motor should be like 100A
+const float MAXREVERSEDUTY = .20;   // NOT USED CURRENTLY - planning on doing error checking similar to forward driving
+const float MAXBRAKECURRENT = 10;   // Max current for regenerative braking
 
 // Analog pin for acceleration pedal and brake pedal
 const int accel_in = A6;
@@ -52,18 +56,25 @@ uint8_t Low[8]     = {0x18, 0x18, 0x18, 0x18, 0x18, 0x18, 0x18, 0x18};
 uint8_t Left[8]    = {0x03, 0x02, 0x02, 0x02, 0x02, 0x02, 0x02, 0x03};
 uint8_t Right[8]   = {0x18, 0x08, 0x08, 0x0c, 0x0c, 0x08, 0x08, 0x18};
 
+
 // Predefine all functions within this sketch
 // Might make a seperate file in order to simplify this code
 //  That header will contain all of these functions
 void initialize_screens();
 void updateScreens();
 void updateDrive();
-float mapping(float input, float a, float b, float c, float d);
 void updateScreen1();
 void updateScreen2();
 void updateScreen3();
 void updateScreen4();
+float mapping(float input, float in_min, float in_max, float out_min, float out_max);
 
+/*  Setup Function
+ *   Start Serial Ports 1 and 2 at 115200 for communication with VESCs
+ *   Create custom characters to be used on the LCD Displays for battery
+ *   Initialize all screens to say "Initializing"
+ * 
+ */
 void setup() {
   Serial.begin(9600);     // baud rate for Serial Monitor for debugging
   //while(!Serial){;}       // wait while Serial Monitor not open
@@ -86,6 +97,12 @@ void setup() {
   initialize_screens();
 }
 
+/*  Loop function
+ *   Update Drive is called
+ *      - This function will read in all values necessary and update the currents to the motors
+ *   Update Screens is called
+ *      - This function will read values from the VESCs and will display them onto the LCD screens
+ */
 void loop() {
    updateDrive();
    updateScreens();
@@ -96,7 +113,6 @@ void loop() {
 // Maps that 0-5V value to a duty cycle (0-maxMotorDuty)
 // Prints off the time the function took as well for testing purposes
 void updateDrive(){
-  static int lastRead = 260;
   long unsigned int startTime = micros();
   int pedal = analogRead(accel_in); // Because we are running on 3.3V not 5V now this reads between 160-850 
   int brake = analogRead(brake_in); // Read the brake input
@@ -109,15 +125,14 @@ void updateDrive(){
   Serial.println(brake);
   
   float current = 0;
-  float reverseCurrent = 0;
 
 /* Need to add in a safety feature to not allow immediate switch from forward to reverse while kart is moving
  *  
  */
   if(pedal > 350 && pedal < 1024){  // We have stepped on the gas
-    if(/*digitalRead(switch1)*/false){         // have toggled the reverse switch
+    if(digitalRead(switch1)){                        // have toggled the reverse switch
       current = -mapping(pedal, 0, 1024, 0, MAXREVERSECURRENT);   // sets current to negative current for reverse
-    } else {                          // are still in Drive
+    } else {                                                  // are still in Drive
       current = mapping(pedal, 0, 1024, 0, MAXMOTORCURRENT);      // sets current to positive for drive
     }
 
@@ -140,49 +155,6 @@ void updateDrive(){
     VESC_left.setBrakeCurrent(MAXBRAKECURRENT);
   }
   
-  // No braking engaged
-  /*
-  if(pedal > 260 && pedal < 800 && brake < 20){ 
-    current        = mapping(pedal, 260, 850, 0, MAXMOTORCURRENT);
-    reverseCurrent = mapping(pedal, 260, 850, 0, MAXREVERSECURRENT);
-
-  // Braking Engaged, limit the current
-  } else if(brake >= 20){ // Brakes have been engaged, need to limit driving power
-    int maxCurrent = mapping(brake, 0, 1024, 0, MAXMOTORCURRENT); // 0, 1024 might have to change dependi g on how the sensor works
-    current = mapping(pedal, 260, 850, 0, MAXMOTORCURRENT) - maxCurrent;
-    if(current < 0) current = 0;
-
-    int maxReverseCurrent = mapping(brake, 0, 1024, 0, MAXREVERSECURRENT);  // 0, 1024 might have to change depending on how the sensor works
-    reverseCurrent = mapping(pedal, 260, 850, 0, MAXREVERSECURRENT);
-    if(reverseCurrent < 0) reverseCurrent = 0;
-
-    Serial.print("Current: ");
-    Serial.println(current);
-    Serial.print("reverse: ");
-    Serial.println(reverseCurrent);
-    float brakeCurrent = mapping(brake, 0, 1024, 0, MAXBRAKECURRENT);
-    VESC_right.setBrakeCurrent(brakeCurrent);
-    VESC_left.setBrakeCurrent(brakeCurrent);
-    Serial.print("Brake Current: ");
-    Serial.println(brakeCurrent);
-    
-
-  // else default to no current
-  } else {   
-    current = 0;
-    reverseCurrent = 0;
-  }
-  
-  /*if(digitalRead(switch1) == 0){ // Forward Mode
-    VESC_right.setCurrent(current);
-    VESC_left.setCurrent(current);
-    
-  } else {                  // Reverse 
-    VESC_right.setCurrent(-reverseCurrent);
-    VESC_left.setCurrent(-reverseCurrent);
-  }*/
-
-  
   long unsigned int totalTime = micros() - startTime;
   Serial.print("Time to run updateDrive: ");
   Serial.print(totalTime);
@@ -192,8 +164,8 @@ void updateDrive(){
 
 // works the same as the built in map function, but returns a
 // float for more accurate mapping at smaller values
-float mapping(float input, float a, float b, float c, float d){
-  return (input /(b-a)*(d-c)+c);
+float mapping(float input, float in_min, float in_max, float out_min, float out_max){
+  return (input - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
 }
 
 
@@ -206,7 +178,7 @@ void updateScreens(){
   bool leftGood = VESC_left.getVescValues();
   bool rightGood = VESC_right.getVescValues();
   
-  if(leftGood && rightGood){
+  if(leftGood && rightGood){  // If we have connection to both VESCs - update the screens
     long unsigned int startTime = micros();
 
     Serial.print("Voltage remaining: ");
@@ -237,6 +209,9 @@ void updateScreens(){
     Serial.print("Time to run updateScreens: ");
     Serial.print(TotalTime);
     Serial.println("us");
+
+  // If not connected to one of the VESCs - print out which VESC lost connection
+  // Will later update this to one of the LCD displays
   } else if(!leftGood && !rightGood) {
     Serial.println("Could not get data from both VESCs");
   } else if(!leftGood){
@@ -244,7 +219,7 @@ void updateScreens(){
   } else if(!rightGood){
     Serial.println("Could not get data from right VESC");
   } else {
-    Serial.println("Something is fucked up");
+    Serial.println("Something is going horribly wrong - good luck figuring out why");
   }
 }
 
@@ -310,7 +285,6 @@ void updateScreen3(){
 }
 
 // Voltage of both motors
-// This needs to be updated to show battery life remaining
 // 50.4 - 42 Volts - 43V means cutoff power
 void updateScreen4(){
   float voltageLeft = VESC_left.data.inpVoltage;
@@ -326,11 +300,21 @@ void updateScreen4(){
   screen4.clear();
   screen4.setCursor(0,0);
   screen4.write("Battery: ");
-  //add in spot for battery percentage
   
-  screen4.setCursor(0,1); // write the left side of battery
+  // calculate the battery percentage
+  float batteryPercent = ((52 - batteryV) / 8.4) * 100;
+  Serial.print("Battery Percentage: ");
+  Serial.println(batteryPercent);
+
+  // display the battery percentage
+  char buf[16];
+  itoa(int(batteryPercent), buf, 10);
+  screen4.write(buf);
+  screen4.write("%");
+  
+  screen4.setCursor(1,1); // write the left side of battery
   screen4.write(4);
-  screen4.setCursor(0,8); // write the right side of the battery
+  screen4.setCursor(1,8); // write the right side of the battery
   screen4.write(5);
   screen4.setCursor(1,7);
 
@@ -362,7 +346,7 @@ void updateScreen4(){
     // CUT POWER TO MOTORS BATTERY IS EMPTY
   }
   
-  char Rbuf[16];
+  /*char Rbuf[16];
   char Lbuf[16];
   
   itoa(int(VESC_left.data.inpVoltage), Lbuf, 10);
@@ -377,7 +361,7 @@ void updateScreen4(){
   screen4.write("Right: ");
   screen4.write(Rbuf);
   screen4.setCursor(15,1);
-  screen4.write("V");
+  screen4.write("V");*/
   
 }
 
