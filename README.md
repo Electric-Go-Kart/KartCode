@@ -1,6 +1,8 @@
-# Arduino Code
+# Kart Code
 
-This is our Arduino code for Senior design
+Year: 2021/2022
+
+This is the code for our electric go kart senior design project. This repo was forked from [Electric-Go-Kart/ArduinoCode](https://github.com/Electric-Go-Kart/ArduinoCode), which is the repo from last year's team.
 
 The Prototype Code runs through updates out to steering, throttle, and lights.
 
